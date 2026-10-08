@@ -1,0 +1,8 @@
+packages:
+  - "packages/*"
+allowBuilds:
+  unrs-resolver: true
+  esbuild: true
+  '@parcel/watcher': true
+  vue-demi: true
+  simple-git-hooks: true
