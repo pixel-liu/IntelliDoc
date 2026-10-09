@@ -85,6 +85,21 @@ public class ElasticsearchService {
         }
     }
 
+    public void deleteByFileMd5AndUserId(String fileMd5, String userId) {
+        try {
+            var response = esClient.deleteByQuery(d -> d.index("knowledge_base")
+                    .refresh(true)
+                    .query(q -> q.bool(b -> b
+                            .filter(f -> f.term(t -> t.field("fileMd5").value(fileMd5)))
+                            .filter(f -> f.term(t -> t.field("userId").value(userId))))));
+            if (response.timedOut() || response.versionConflicts() > 0 || !response.failures().isEmpty()) {
+                throw new IllegalStateException("删除文档索引未完成");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("删除用户文档索引失败", e);
+        }
+    }
+
     public long countByFileMd5(String fileMd5) {
         try {
             CountResponse response = esClient.count(c -> c

@@ -69,6 +69,9 @@ public class DocumentService {
     @Autowired
     private MinioClient minioClient;
 
+    @org.springframework.beans.factory.annotation.Value("${minio.bucketName}")
+    private String bucketName;
+
     @Autowired
     private ElasticsearchService elasticsearchService;
 
@@ -108,99 +111,54 @@ public class DocumentService {
      */
     @Transactional
     public void deleteDocument(String fileMd5, String userId) {
-        logger.info("开始删除文档: {}", fileMd5);
-        
-        try {
-            // 获取文件信息以获取文件名
-            FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, userId)
-                    .orElseThrow(() -> new RuntimeException("文件不存在"));
-            
-            // 1. 删除Elasticsearch中的数据
-            try {
-                elasticsearchService.deleteByFileMd5(fileMd5);
-                logger.info("成功从Elasticsearch删除文档: {}", fileMd5);
-            } catch (Exception e) {
-                logger.error("从Elasticsearch删除文档时出错: {}", fileMd5, e);
-                // 继续删除其他数据
-            }
-            
-            // 2. 删除MinIO中的文件（使用MD5作为对象路径）
-            try {
-                String objectName = "merged/" + fileUpload.getFileMd5();
-                minioClient.removeObject(
-                        RemoveObjectArgs.builder()
-                                .bucket("uploads")
-                                .object(objectName)
-                                .build()
-                );
-                logger.info("成功从MinIO删除文件: {}", objectName);
-            } catch (Exception e) {
-                logger.warn("使用MD5路径删除文件失败，尝试使用文件名路径: {}", fileMd5);
-                // 降级：尝试使用旧的文件名路径（兼容旧数据）
-                try {
-                    String oldObjectName = "merged/" + fileUpload.getFileName();
-                    minioClient.removeObject(
-                            RemoveObjectArgs.builder()
-                                    .bucket("uploads")
-                                    .object(oldObjectName)
-                                    .build()
-                    );
-                    logger.info("使用旧路径成功从MinIO删除文件: {}", oldObjectName);
-                } catch (Exception ex) {
-                    logger.error("从MinIO删除文件时出错（新旧路径都失败）: {}", fileMd5, ex);
-                    // 继续删除其他数据
-                }
-            }
-
-            invalidatePdfSinglePagePreviewCache(fileMd5);
-            
-            // 3. 删除DocumentVector记录
-            try {
-                documentVectorRepository.deleteByFileMd5(fileMd5);
-                logger.info("成功删除文档向量记录: {}", fileMd5);
-            } catch (Exception e) {
-                logger.error("删除文档向量记录时出错: {}", fileMd5, e);
-                // 继续删除其他数据
-            }
-
-            // 删除分片元数据，避免同 MD5 文件再次上传时误判分片已经存在
-            try {
-                int deletedChunkRows = chunkInfoRepository.deleteByFileMd5(fileMd5);
-                logger.info("成功删除文档分片元数据: fileMd5={}, deletedRows={}", fileMd5, deletedChunkRows);
-            } catch (Exception e) {
-                logger.error("删除文档分片元数据时出错: {}", fileMd5, e);
-                // 继续删除其他数据
-            }
-            
-            // 4. 删除FileUpload记录
-            fileUploadRepository.deleteByFileMd5(fileMd5);
-            logger.info("成功删除文件上传记录: {}", fileMd5);
-            
-            logger.info("文档删除完成: {}", fileMd5);
-        } catch (Exception e) {
-            logger.error("删除文档过程中发生错误: {}", fileMd5, e);
-            throw new RuntimeException("删除文档失败: " + e.getMessage(), e);
+        // Lock all references in a stable order so concurrent deletes cannot both
+        // decide to retain (or remove) the shared object from a stale snapshot.
+        List<FileUpload> references = fileUploadRepository.findAllByFileMd5ForUpdate(fileMd5);
+        if (references.stream().noneMatch(file -> userId.equals(file.getUserId()))) {
+            throw new IllegalArgumentException("文件不存在");
         }
+        boolean shared = references.stream().anyMatch(file -> !userId.equals(file.getUserId()));
+
+        // Permission-bearing data always belongs to one uploader. Fail before
+        // dropping its DB reference if search cleanup fails, allowing a retry.
+        elasticsearchService.deleteByFileMd5AndUserId(fileMd5, userId);
+        documentVectorRepository.deleteByFileMd5AndUserId(fileMd5, userId);
+        fileUploadRepository.deleteByFileMd5AndUserId(fileMd5, userId);
+        uploadService.deleteFileMark(fileMd5, userId);
+
+        if (!shared) {
+            chunkInfoRepository.deleteByFileMd5(fileMd5);
+            try {
+                minioClient.removeObject(RemoveObjectArgs.builder()
+                        .bucket(bucketName).object("merged/" + fileMd5).build());
+            } catch (Exception e) {
+                throw new RuntimeException("删除原文件失败", e);
+            }
+            // Never delete a legacy object by file name: another document with
+            // different contents can share that name. Such objects need audited GC.
+            invalidatePdfSinglePagePreviewCache(fileMd5);
+        }
+        logger.info("用户文档删除完成: fileMd5={}, userId={}, retainedSharedContent={}", fileMd5, userId, shared);
     }
 
     @Transactional
-    public VectorizationService.VectorizationUsageResult reindexDocument(String fileMd5, String requesterId) {
+    public VectorizationService.VectorizationUsageResult reindexDocument(String fileMd5, String ownerUserId, String requesterId) {
         logger.info("开始重建文档索引: fileMd5={}, requesterId={}", fileMd5, requesterId);
 
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5)
+        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
 
         markVectorizationProcessing(fileUpload, true);
 
         try (InputStream fileStream = uploadService.getMergedFileStream(fileMd5)) {
             try {
-                elasticsearchService.deleteByFileMd5(fileMd5);
+                elasticsearchService.deleteByFileMd5AndUserId(fileMd5, ownerUserId);
                 logger.info("重建前已清理 Elasticsearch 文档: {}", fileMd5);
             } catch (Exception e) {
-                logger.warn("重建前清理 Elasticsearch 失败: fileMd5={}, error={}", fileMd5, e.getMessage());
+                throw new RuntimeException("重建前清理 Elasticsearch 失败", e);
             }
 
-            documentVectorRepository.deleteByFileMd5(fileMd5);
+            documentVectorRepository.deleteByFileMd5AndUserId(fileMd5, ownerUserId);
             invalidatePdfSinglePagePreviewCache(fileMd5);
 
             parseService.parseAndSave(
@@ -239,8 +197,8 @@ public class DocumentService {
     }
 
     @Transactional
-    public FileUpload enqueueAsyncVectorizationRetry(String fileMd5, String requesterId) {
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5)
+    public FileUpload enqueueAsyncVectorizationRetry(String fileMd5, String ownerUserId, String requesterId) {
+        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
 
         markVectorizationProcessing(fileUpload, true);
@@ -266,29 +224,29 @@ public class DocumentService {
     }
 
     @Transactional
-    public void markVectorizationProcessing(String fileMd5, boolean resetActualUsage) {
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5)
+    public void markVectorizationProcessing(String fileMd5, String ownerUserId, boolean resetActualUsage) {
+        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
         markVectorizationProcessing(fileUpload, resetActualUsage);
     }
 
     @Transactional
-    public void markVectorizationCompleted(String fileMd5, VectorizationService.VectorizationUsageResult result) {
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5)
+    public void markVectorizationCompleted(String fileMd5, String ownerUserId, VectorizationService.VectorizationUsageResult result) {
+        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
         markVectorizationCompleted(fileUpload, result);
     }
 
     @Transactional
-    public void markVectorizationFailed(String fileMd5, String errorMessage) {
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5)
+    public void markVectorizationFailed(String fileMd5, String ownerUserId, String errorMessage) {
+        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
         markVectorizationFailed(fileUpload, errorMessage);
     }
 
     @Transactional
-    public void markVectorizationFailed(String fileMd5, Throwable error) {
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5)
+    public void markVectorizationFailed(String fileMd5, String ownerUserId, Throwable error) {
+        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
         markVectorizationFailed(fileUpload, error);
     }
@@ -570,7 +528,7 @@ public class DocumentService {
                 String presignedUrl = minioClient.getPresignedObjectUrl(
                         GetPresignedObjectUrlArgs.builder()
                                 .method(Method.GET)
-                                .bucket("uploads")
+                                .bucket(bucketName)
                                 .object(objectName)
                                 .expiry(3600)
                                 .build()
@@ -588,7 +546,7 @@ public class DocumentService {
                 String presignedUrl = minioClient.getPresignedObjectUrl(
                         GetPresignedObjectUrlArgs.builder()
                                 .method(Method.GET)
-                                .bucket("uploads")
+                                .bucket(bucketName)
                                 .object(oldObjectName)
                                 .expiry(3600)
                                 .build()
@@ -736,7 +694,7 @@ public class DocumentService {
         try {
             InputStream inputStream = minioClient.getObject(
                     GetObjectArgs.builder()
-                            .bucket("uploads")
+                            .bucket(bucketName)
                             .object(objectName)
                             .build());
             logger.info("使用新路径（MD5）获取文件流: fileMd5={}, objectName={}", fileUpload.getFileMd5(), objectName);
@@ -747,7 +705,7 @@ public class DocumentService {
             String oldObjectName = "merged/" + fileUpload.getFileName();
             InputStream inputStream = minioClient.getObject(
                     GetObjectArgs.builder()
-                            .bucket("uploads")
+                            .bucket(bucketName)
                             .object(oldObjectName)
                             .build());
             logger.info("使用旧路径（文件名）获取文件流: fileMd5={}, objectName={}", fileUpload.getFileMd5(), oldObjectName);

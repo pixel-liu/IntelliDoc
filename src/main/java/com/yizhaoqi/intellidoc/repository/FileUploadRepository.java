@@ -1,6 +1,8 @@
 package com.yizhaoqi.intellidoc.repository;
 
 import com.yizhaoqi.intellidoc.model.FileUpload;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +19,10 @@ public interface FileUploadRepository extends JpaRepository<FileUpload, Long> {
     Optional<FileUpload> findFirstByFileMd5OrderByCreatedAtDesc(String fileMd5);
 
     List<FileUpload> findAllByFileMd5(String fileMd5);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select f from FileUpload f where f.fileMd5 = :fileMd5 order by f.id")
+    List<FileUpload> findAllByFileMd5ForUpdate(@Param("fileMd5") String fileMd5);
 
     List<FileUpload> findAllByVectorizationStatusIsNull();
 

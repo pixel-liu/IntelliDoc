@@ -50,7 +50,7 @@ public class VectorizationService {
                        fileMd5, userId, orgTag, isPublic);
                        
             // 获取文件分块内容
-            List<TextChunk> chunks = fetchTextChunks(fileMd5);
+            List<TextChunk> chunks = fetchTextChunks(fileMd5, userId);
             if (chunks == null || chunks.isEmpty()) {
                 logger.warn("未找到分块内容，fileMd5: {}", fileMd5);
                 return new VectorizationUsageResult(0, 0, embeddingClient.currentModelVersion());
@@ -111,9 +111,9 @@ public class VectorizationService {
      * @return 分块内容列表
      */
     // 从数据库获取分块内容
-    private List<TextChunk> fetchTextChunks(String fileMd5) {
+    private List<TextChunk> fetchTextChunks(String fileMd5, String userId) {
         // 调用 Repository 查询数据
-        List<DocumentVector> vectors = documentVectorRepository.findByFileMd5OrderByChunkIdAsc(fileMd5);
+        List<DocumentVector> vectors = documentVectorRepository.findByFileMd5AndUserIdOrderByChunkIdAsc(fileMd5, userId);
 
         // 转换为 TextChunk 列表
         return vectors.stream()

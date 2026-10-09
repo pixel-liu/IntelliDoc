@@ -45,6 +45,9 @@ public class UploadService {
     @Autowired
     private MinioClient minioClient;
 
+    @org.springframework.beans.factory.annotation.Value("${minio.bucketName:uploads}")
+    private String bucketName = "uploads";
+
     // 用于操作文件上传记录的 Repository
     @Autowired
     private FileUploadRepository fileUploadRepository;
@@ -126,7 +129,7 @@ public class UploadService {
                           fileMd5, fileName, fileType, chunkIndex, storagePath, file.getSize(), contentType);
 
                 PutObjectArgs putObjectArgs = PutObjectArgs.builder()
-                        .bucket("uploads")
+                        .bucket(bucketName)
                         .object(storagePath)
                         .stream(file.getInputStream(), file.getSize(), -1)
                         .contentType(file.getContentType())
@@ -548,7 +551,7 @@ public class UploadService {
                 try {
                     StatObjectResponse stat = minioClient.statObject(
                         StatObjectArgs.builder()
-                            .bucket("uploads")
+                            .bucket(bucketName)
                             .object(path)
                             .build()
                     );
@@ -568,7 +571,7 @@ public class UploadService {
             try {
                 // 合并分片
                 List<ComposeSource> sources = partPaths.stream()
-                        .map(path -> ComposeSource.builder().bucket("uploads").object(path).build())
+                        .map(path -> ComposeSource.builder().bucket(bucketName).object(path).build())
                         .collect(Collectors.toList());
                 
                 logger.debug("构建合并请求 => fileMd5: {}, fileName: {}, targetPath: {}, sourcePaths: {}", 
@@ -576,7 +579,7 @@ public class UploadService {
                 
                 minioClient.composeObject(
                         ComposeObjectArgs.builder()
-                                .bucket("uploads")
+                                .bucket(bucketName)
                                 .object(mergedPath)
                                 .sources(sources)
                                 .build()
@@ -586,7 +589,7 @@ public class UploadService {
                 // 检查合并后的文件
                 StatObjectResponse stat = minioClient.statObject(
                     StatObjectArgs.builder()
-                        .bucket("uploads")
+                        .bucket(bucketName)
                         .object(mergedPath)
                         .build()
                 );
@@ -598,7 +601,7 @@ public class UploadService {
                     try {
                         minioClient.removeObject(
                                 RemoveObjectArgs.builder()
-                                        .bucket("uploads")
+                                        .bucket(bucketName)
                                         .object(path)
                                         .build()
                         );
@@ -650,7 +653,7 @@ public class UploadService {
     public GetObjectResponse getMergedFileStream(String fileMd5) throws Exception {
         return minioClient.getObject(
                 GetObjectArgs.builder()
-                        .bucket("uploads")
+                        .bucket(bucketName)
                         .object("merged/" + fileMd5)
                         .build()
         );
@@ -660,7 +663,7 @@ public class UploadService {
         return minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
-                        .bucket("uploads")
+                        .bucket(bucketName)
                         .object("merged/" + fileMd5)
                         .expiry(1, TimeUnit.HOURS)
                         .build()
@@ -675,7 +678,7 @@ public class UploadService {
         try {
             minioClient.statObject(
                     StatObjectArgs.builder()
-                            .bucket("uploads")
+                            .bucket(bucketName)
                             .object(storagePath)
                             .build()
             );

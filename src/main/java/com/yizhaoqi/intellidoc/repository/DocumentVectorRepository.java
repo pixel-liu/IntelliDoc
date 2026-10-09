@@ -13,6 +13,12 @@ public interface DocumentVectorRepository extends JpaRepository<DocumentVector, 
 
     List<DocumentVector> findByFileMd5OrderByChunkIdAsc(String fileMd5); // 按分块顺序查询某文件的所有分块
 
+    @Modifying
+    @Query("delete from DocumentVector v where v.fileMd5 = ?1 and v.userId = ?2")
+    void deleteByFileMd5AndUserId(String fileMd5, String userId);
+
+    List<DocumentVector> findByFileMd5AndUserIdOrderByChunkIdAsc(String fileMd5, String userId);
+
     long countByFileMd5(String fileMd5);
 
     long countByFileMd5AndPageNumberIsNotNull(String fileMd5);

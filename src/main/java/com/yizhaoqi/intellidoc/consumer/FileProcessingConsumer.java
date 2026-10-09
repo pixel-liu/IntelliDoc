@@ -44,7 +44,7 @@ public class FileProcessingConsumer {
         log.info("文件权限信息: userId={}, orgTag={}, isPublic={}", 
                 task.getUserId(), task.getOrgTag(), task.isPublic());
 
-        documentService.markVectorizationProcessing(task.getFileMd5(), false);
+        documentService.markVectorizationProcessing(task.getFileMd5(), task.getUserId(), false);
 
         if (FileProcessingTask.TASK_TYPE_REINDEX.equals(task.getTaskType())) {
             processReindexTask(task);
@@ -78,10 +78,10 @@ public class FileProcessingConsumer {
                     task.isPublic(),
                     task.getUserId()
             );
-            documentService.markVectorizationCompleted(task.getFileMd5(), vectorizationResult);
+            documentService.markVectorizationCompleted(task.getFileMd5(), task.getUserId(), vectorizationResult);
             log.info("向量化完成，fileMd5: {}", task.getFileMd5());
         } catch (Exception e) {
-            documentService.markVectorizationFailed(task.getFileMd5(), e);
+            documentService.markVectorizationFailed(task.getFileMd5(), task.getUserId(), e);
             log.error("Error processing task: {}", task, e);
             // 抛出异常让 Kafka 的 DefaultErrorHandler 捕获并触发重试 / 死信
             throw new RuntimeException("Error processing task", e);
@@ -102,9 +102,9 @@ public class FileProcessingConsumer {
             String requesterId = task.getRequesterId() == null || task.getRequesterId().isBlank()
                     ? task.getUserId()
                     : task.getRequesterId();
-            documentService.reindexDocument(task.getFileMd5(), requesterId);
+            documentService.reindexDocument(task.getFileMd5(), task.getUserId(), requesterId);
         } catch (Exception e) {
-            documentService.markVectorizationFailed(task.getFileMd5(), e);
+            documentService.markVectorizationFailed(task.getFileMd5(), task.getUserId(), e);
             log.error("Error reindexing task: {}", task, e);
             throw new RuntimeException("Error reindexing task", e);
         }

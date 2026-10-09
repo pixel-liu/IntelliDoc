@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -105,18 +107,20 @@ class UploadServiceTest {
     }
 
     @Test
-    void uploadChunkSkipsDatabaseWhenRedisBitmapHit() throws Exception {
+    void uploadChunkValidatesMetadataAndStorageWhenRedisBitmapHit() throws Exception {
         FileUpload fileUpload = uploadingFile();
         when(fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc("md5", "1"))
                 .thenReturn(Optional.of(fileUpload));
         when(valueOperations.getBit("upload:1:md5", 0)).thenReturn(true);
+        when(chunkInfoRepository.existsByFileMd5AndChunkIndex("md5", 0)).thenReturn(true);
 
         MockMultipartFile file = new MockMultipartFile("file", "test.pdf", "application/pdf", "demo".getBytes());
 
         uploadService.uploadChunk("md5", 0, 1024L, "test.pdf", file, "TEAM_A", false, "1");
 
-        verifyNoInteractions(chunkInfoRepository);
-        verifyNoInteractions(minioClient);
+        verify(chunkInfoRepository).existsByFileMd5AndChunkIndex("md5", 0);
+        verify(minioClient).statObject(any(io.minio.StatObjectArgs.class));
+        verify(minioClient, never()).putObject(any(io.minio.PutObjectArgs.class));
     }
 
     @Test
@@ -132,7 +136,8 @@ class UploadServiceTest {
         uploadService.uploadChunk("md5", 0, 1024L, "test.pdf", file, "TEAM_A", false, "1");
 
         verify(valueOperations).setBit("upload:1:md5", 0, true);
-        verifyNoInteractions(minioClient);
+        verify(minioClient, atLeastOnce()).statObject(any(io.minio.StatObjectArgs.class));
+        verify(minioClient, never()).putObject(any(io.minio.PutObjectArgs.class));
     }
 
     @Test

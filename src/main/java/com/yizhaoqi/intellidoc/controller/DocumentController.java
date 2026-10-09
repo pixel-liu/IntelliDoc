@@ -119,7 +119,10 @@ public class DocumentController {
         try {
             LogUtils.logBusiness("REINDEX_DOCUMENT", userId, "接收到重建文档索引请求: fileMd5=%s, role=%s", fileMd5, role);
 
-            Optional<FileUpload> fileOpt = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5);
+            Optional<FileUpload> fileOpt = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, userId);
+            if (fileOpt.isEmpty() && "ADMIN".equals(role)) {
+                fileOpt = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5);
+            }
             if (fileOpt.isEmpty()) {
                 monitor.end("重建失败：文档不存在");
                 Map<String, Object> response = new HashMap<>();
@@ -137,7 +140,7 @@ public class DocumentController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
 
-            var result = documentService.reindexDocument(fileMd5, userId);
+            var result = documentService.reindexDocument(fileMd5, file.getUserId(), userId);
             monitor.end("文档索引重建成功");
 
             Map<String, Object> data = new HashMap<>();
@@ -172,7 +175,10 @@ public class DocumentController {
         try {
             LogUtils.logBusiness("RETRY_VECTORIZATION_ASYNC", userId, "接收到异步向量化重试请求: fileMd5=%s, role=%s", fileMd5, role);
 
-            Optional<FileUpload> fileOpt = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5);
+            Optional<FileUpload> fileOpt = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, userId);
+            if (fileOpt.isEmpty() && "ADMIN".equals(role)) {
+                fileOpt = fileUploadRepository.findFirstByFileMd5OrderByCreatedAtDesc(fileMd5);
+            }
             if (fileOpt.isEmpty()) {
                 monitor.end("重试失败：文档不存在");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
@@ -190,7 +196,7 @@ public class DocumentController {
                 ));
             }
 
-            FileUpload queuedFile = documentService.enqueueAsyncVectorizationRetry(fileMd5, userId);
+            FileUpload queuedFile = documentService.enqueueAsyncVectorizationRetry(fileMd5, file.getUserId(), userId);
             monitor.end("异步向量化重试任务已提交");
 
             Map<String, Object> data = new HashMap<>();
