@@ -16,5 +16,7 @@ public interface ConversationSessionRepository extends JpaRepository<Conversatio
 
     Optional<ConversationSession> findByConversationId(String conversationId);
 
+    Optional<ConversationSession> findByConversationIdAndUserId(String conversationId, Long userId);
+
     boolean existsByConversationId(String conversationId);
 }

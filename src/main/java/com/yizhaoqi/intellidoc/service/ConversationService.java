@@ -62,6 +62,7 @@ public class ConversationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
+        requireOwnedSession(userId, conversationId);
         saveConversation(user, question, answer, conversationId, referenceMappings);
         updateSessionTitleIfDefault(conversationId, question);
         touchSessionUpdatedAt(conversationId);
@@ -126,7 +127,11 @@ public class ConversationService {
     }
 
     public void ensureConversationSession(Long userId, String conversationId, String title) {
-        if (sessionRepository.existsByConversationId(conversationId)) {
+        var existing = sessionRepository.findByConversationId(conversationId);
+        if (existing.isPresent()) {
+            if (!existing.get().getUser().getId().equals(userId)) {
+                throw new CustomException("对话不存在", HttpStatus.NOT_FOUND);
+            }
             return;
         }
 
@@ -142,14 +147,12 @@ public class ConversationService {
     }
 
     public void switchCurrentConversation(Long userId, String conversationId) {
-        if (!sessionRepository.existsByConversationId(conversationId)) {
-            throw new CustomException("对话不存在", HttpStatus.NOT_FOUND);
-        }
+        requireOwnedSession(userId, conversationId);
         String redisKey = "user:" + userId + ":current_conversation";
         redisTemplate.opsForValue().set(redisKey, conversationId, Duration.ofDays(7));
     }
 
-    public void updateSessionTitle(String conversationId, String title) {
+    private void updateSessionTitle(String conversationId, String title) {
         sessionRepository.findByConversationId(conversationId).ifPresent(session -> {
             if (session.getTitle() == null || "新对话".equals(session.getTitle())) {
                 session.setTitle(title);
@@ -158,16 +161,14 @@ public class ConversationService {
         });
     }
 
-    public void archiveConversationSession(String conversationId) {
-        ConversationSession session = sessionRepository.findByConversationId(conversationId)
-                .orElseThrow(() -> new CustomException("对话不存在", HttpStatus.NOT_FOUND));
+    public void archiveConversationSession(Long userId, String conversationId) {
+        ConversationSession session = requireOwnedSession(userId, conversationId);
         session.setStatus(ConversationSession.SessionStatus.ARCHIVED);
         sessionRepository.save(session);
     }
 
-    public void unarchiveConversationSession(String conversationId) {
-        ConversationSession session = sessionRepository.findByConversationId(conversationId)
-                .orElseThrow(() -> new CustomException("对话不存在", HttpStatus.NOT_FOUND));
+    public void unarchiveConversationSession(Long userId, String conversationId) {
+        ConversationSession session = requireOwnedSession(userId, conversationId);
         session.setStatus(ConversationSession.SessionStatus.ACTIVE);
         sessionRepository.save(session);
     }
@@ -179,7 +180,7 @@ public class ConversationService {
         });
     }
 
-    public void updateSessionTitleIfDefault(String conversationId, String title) {
+    private void updateSessionTitleIfDefault(String conversationId, String title) {
         if (title == null || title.isBlank()) {
             return;
         }
@@ -194,8 +195,14 @@ public class ConversationService {
 
     // ---- Message queries ----
 
-    public List<Map<String, Object>> getMessagesByConversationId(String conversationId) {
-        List<Conversation> conversations = conversationRepository.findByConversationIdOrderByTimestampAsc(conversationId);
+    private ConversationSession requireOwnedSession(Long userId, String conversationId) {
+        return sessionRepository.findByConversationIdAndUserId(conversationId, userId)
+                .orElseThrow(() -> new CustomException("对话不存在", HttpStatus.NOT_FOUND));
+    }
+
+    public List<Map<String, Object>> getMessagesByConversationId(Long userId, String conversationId) {
+        requireOwnedSession(userId, conversationId);
+        List<Conversation> conversations = conversationRepository.findByConversationIdAndUserIdOrderByTimestampAsc(conversationId, userId);
         return toMessageHistory(conversations, false);
     }
 

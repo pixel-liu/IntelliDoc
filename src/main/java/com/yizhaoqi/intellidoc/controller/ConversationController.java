@@ -52,7 +52,8 @@ public class ConversationController {
             List<Map<String, Object>> messages;
 
             if (conversationId != null && !conversationId.isBlank()) {
-                messages = conversationService.getMessagesByConversationId(conversationId);
+                Long userId = Long.parseLong(jwtUtils.extractUserIdFromToken(token.replace("Bearer ", "")));
+                messages = conversationService.getMessagesByConversationId(userId, conversationId);
             } else {
                 LocalDateTime startDateTime = parseStartDate(start_date);
                 LocalDateTime endDateTime = parseEndDate(end_date);
