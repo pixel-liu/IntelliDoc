@@ -1,0 +1,2 @@
+{"id": "example-answerable", "latencyMs": 120, "results": [{"fileMd5": "example-history", "chunkId": 0, "retrievalMode": "HYBRID"}, {"fileMd5": "example-storage", "chunkId": 1, "retrievalMode": "HYBRID"}], "citations": [{"fileMd5": "example-history", "chunkId": 0}]}
+{"id": "example-no-answer", "latencyMs": 80, "results": []}

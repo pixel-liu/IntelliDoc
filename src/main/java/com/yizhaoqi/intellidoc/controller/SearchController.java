@@ -52,15 +52,14 @@ public class SearchController {
             LogUtils.logBusiness("HYBRID_SEARCH", userId != null ? userId : "anonymous", 
                     "开始混合检索: query=%s, topK=%d", query, topK);
             
-            List<SearchResult> results;
-            if (userId != null) {
-                // 如果有用户ID，使用带权限的搜索
-                results = hybridSearchService.searchWithPermission(query, userId, topK);
-            } else {
-                // 如果没有用户ID，使用普通搜索（仅公开内容）
-                results = hybridSearchService.search(query, topK);
+            if (userId == null || userId.isBlank()) {
+                throw new com.yizhaoqi.intellidoc.exception.CustomException("需要登录后检索", org.springframework.http.HttpStatus.UNAUTHORIZED);
             }
-            
+            if (query.isBlank() || topK < 1 || topK > 100) {
+                throw new com.yizhaoqi.intellidoc.exception.CustomException("query 不能为空，topK 必须介于 1 和 100", org.springframework.http.HttpStatus.BAD_REQUEST);
+            }
+            List<SearchResult> results = hybridSearchService.searchWithPermission(query, userId, topK);
+
             LogUtils.logUserOperation(userId != null ? userId : "anonymous", "HYBRID_SEARCH", 
                     "search_query", "SUCCESS");
             LogUtils.logBusiness("HYBRID_SEARCH", userId != null ? userId : "anonymous", 
@@ -81,7 +80,7 @@ public class SearchController {
             
             // 构造错误响应结构，保持与前端解析一致
             Map<String, Object> errorBody = new HashMap<>(4);
-            errorBody.put("code", 500);
+            errorBody.put("code", e instanceof com.yizhaoqi.intellidoc.exception.CustomException custom ? custom.getStatus().value() : 500);
             errorBody.put("message", e.getMessage());
             errorBody.put("data", Collections.emptyList());
             return errorBody;

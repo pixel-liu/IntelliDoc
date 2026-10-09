@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Map;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 /**
@@ -35,9 +34,11 @@ import java.util.stream.Collectors;
 public class HybridSearchService {
 
     private static final Logger logger = LoggerFactory.getLogger(HybridSearchService.class);
-    private static final double KNN_WEIGHT = 0.3d;
-    private static final double BM25_WEIGHT = 0.7d;
-    private static final int RECALL_MULTIPLIER = 30;
+    @Autowired
+    private com.yizhaoqi.intellidoc.config.HybridSearchProperties searchProperties;
+
+    @Autowired
+    private HybridSearchRanker ranker;
 
     @Autowired
     private ElasticsearchClient esClient;
@@ -88,7 +89,7 @@ public class HybridSearchService {
             }
 
             logger.debug("向量生成成功，开始执行 KNN + BM25 双路融合搜索，权重 KNN={}, BM25={}",
-                    KNN_WEIGHT, BM25_WEIGHT);
+                    searchProperties.getKnnWeight(), searchProperties.getBm25Weight());
 
             Query permissionFilter = buildPermissionFilter(userDbId, userEffectiveTags);
             List<SearchResult> results = fusedSearch(query, queryVector, topK, permissionFilter);
@@ -104,7 +105,7 @@ public class HybridSearchService {
                 return textOnlySearchWithPermission(query, getUserDbId(userId), getUserEffectiveOrgTags(userId), topK);
             } catch (Exception fallbackError) {
                 logger.error("后备搜索也失败", fallbackError);
-                return Collections.emptyList();
+                throw new CustomException("检索服务暂不可用，请稍后重试", HttpStatus.SERVICE_UNAVAILABLE);
             }
         }
     }
@@ -115,7 +116,7 @@ public class HybridSearchService {
      */
     private List<SearchResult> fusedSearch(String query, List<Float> queryVector, int topK,
                                            Query permissionFilter) throws Exception {
-        int recallK = Math.max(topK * RECALL_MULTIPLIER, topK);
+        int recallK = Math.max(topK * searchProperties.getRecallMultiplier(), topK);
 
         SearchResponse<EsDocument> knnResponse = esClient.search(s -> {
             s.index("knowledge_base");
@@ -151,29 +152,10 @@ public class HybridSearchService {
 
         List<Hit<EsDocument>> knnHits = validHits(knnResponse);
         List<Hit<EsDocument>> bm25Hits = validHits(bm25Response);
-        Map<String, Double> normalizedKnnScores = normalizeScores(knnHits);
-        Map<String, Double> normalizedBm25Scores = normalizeScores(bm25Hits);
-        Map<String, FusedHit> candidates = new HashMap<>();
-
-        for (Hit<EsDocument> hit : knnHits) {
-            String key = hitKey(hit);
-            candidates.computeIfAbsent(key, ignored -> new FusedHit(hit.source()))
-                    .knnScore(normalizedKnnScores.getOrDefault(key, 0d));
-        }
-        for (Hit<EsDocument> hit : bm25Hits) {
-            String key = hitKey(hit);
-            candidates.computeIfAbsent(key, ignored -> new FusedHit(hit.source()))
-                    .bm25Score(normalizedBm25Scores.getOrDefault(key, 0d));
-        }
-
-        List<SearchResult> results = candidates.values().stream()
-                .sorted(Comparator.comparingDouble(FusedHit::fusedScore).reversed())
-                .limit(topK)
-                .map(candidate -> toSearchResult(candidate.source(), candidate.fusedScore()))
-                .toList();
-
-        logger.debug("双路召回完成: KNN候选={}, BM25候选={}, 融合候选={}, 返回={}",
-                knnHits.size(), bm25Hits.size(), candidates.size(), results.size());
+        List<SearchResult> results = ranker.rank(knnHits, bm25Hits, topK).stream()
+                .map(hit -> toSearchResult(hit.source(), hit.score())).toList();
+        logger.debug("双路召回完成: fusion={}, KNN候选={}, BM25候选={}, 返回={}",
+                searchProperties.getFusion(), knnHits.size(), bm25Hits.size(), results.size());
         return results;
     }
 
@@ -203,40 +185,6 @@ public class HybridSearchService {
                 .toList();
     }
 
-    private Map<String, Double> normalizeScores(List<Hit<EsDocument>> hits) {
-        Map<String, Double> rawScores = hits.stream()
-                .collect(Collectors.toMap(
-                        this::hitKey,
-                        hit -> hit.score() == null ? 0d : hit.score(),
-                        Math::max
-                ));
-
-        if (rawScores.isEmpty()) {
-            return rawScores;
-        }
-
-        double min = rawScores.values().stream().mapToDouble(Double::doubleValue).min().orElse(0d);
-        double max = rawScores.values().stream().mapToDouble(Double::doubleValue).max().orElse(0d);
-        if (Double.compare(max, min) == 0) {
-            return rawScores.keySet().stream()
-                    .collect(Collectors.toMap(key -> key, key -> 1d));
-        }
-
-        return rawScores.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> (entry.getValue() - min) / (max - min)
-                ));
-    }
-
-    private String hitKey(Hit<EsDocument> hit) {
-        if (hit.id() != null && !hit.id().isBlank()) {
-            return hit.id();
-        }
-        EsDocument source = hit.source();
-        return source.getFileMd5() + "#" + source.getChunkId();
-    }
-
     private SearchResult toSearchResult(EsDocument source, double fusedScore) {
         return new SearchResult(
                 source.getFileMd5(),
@@ -252,34 +200,6 @@ public class HybridSearchService {
                 "HYBRID",
                 source.getTextContent()
         );
-    }
-
-    private static final class FusedHit {
-        private final EsDocument source;
-        private double knnScore;
-        private double bm25Score;
-
-        private FusedHit(EsDocument source) {
-            this.source = source;
-        }
-
-        private FusedHit knnScore(double score) {
-            this.knnScore = score;
-            return this;
-        }
-
-        private FusedHit bm25Score(double score) {
-            this.bm25Score = score;
-            return this;
-        }
-
-        private EsDocument source() {
-            return source;
-        }
-
-        private double fusedScore() {
-            return KNN_WEIGHT * knnScore + BM25_WEIGHT * bm25Score;
-        }
     }
 
     /**
@@ -350,7 +270,7 @@ public class HybridSearchService {
             );
 
             logger.debug("纯文本查询执行完成，命中数量: {}, 最大分数: {}", 
-                response.hits().total().value(), response.hits().maxScore());
+                response.hits().hits().size(), response.hits().maxScore());
 
             List<SearchResult> results = response.hits().hits().stream()
                     .map(hit -> {
@@ -380,7 +300,7 @@ public class HybridSearchService {
             return results;
         } catch (Exception e) {
             logger.error("纯文本搜索失败", e);
-            return new ArrayList<>();
+            throw new RuntimeException("纯文本检索服务不可用", e);
         }
     }
 

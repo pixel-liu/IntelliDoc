@@ -82,3 +82,6 @@ src/main/resources/cert
 *.iml
 *.bak
 /frontend/test-results/
+
+# Python evaluation caches
+__pycache__/

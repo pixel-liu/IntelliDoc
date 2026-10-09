@@ -215,7 +215,7 @@ class ParseServiceUnitTest {
         assertTrue(command.contains("--format"));
         assertTrue(command.contains("json"));
         assertTrue(command.contains("--output"));
-        assertTrue(command.contains("/tmp/output.json"));
+        assertTrue(command.contains(Path.of("/tmp/output.json").toString()));
         assertTrue(command.contains("--ocr-language"));
         assertTrue(command.contains("chi_sim+eng"));
         assertFalse(command.contains("--ocr-server-url"));

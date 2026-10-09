@@ -1,0 +1,2 @@
+{"id": "example-answerable", "example": true, "query": "IntelliDoc 如何保存聊天历史？", "tags": ["history", "citation"], "relevant": [{"fileMd5": "example-history", "chunkId": 0, "grade": 3}, {"fileMd5": "example-storage", "chunkId": 1, "grade": 1}], "forbidden": [{"fileMd5": "example-private-other-user"}]}
+{"id": "example-no-answer", "example": true, "query": "知识库中未收录的问题", "relevant": [], "forbidden": [{"fileMd5": "example-private-other-user"}]}
