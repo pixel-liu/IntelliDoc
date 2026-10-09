@@ -134,6 +134,48 @@ class ModelProviderConfigServiceTest {
     }
 
     @Test
+    void shouldRejectActiveEmbeddingModelChangeWithinSameProvider() {
+        assertEmbeddingChangeRejected("text-embedding-v3", 2048);
+    }
+
+    @Test
+    void shouldRejectActiveEmbeddingDimensionChangeWithinSameProvider() {
+        assertEmbeddingChangeRejected("text-embedding-v4", 1024);
+    }
+
+    private void assertEmbeddingChangeRejected(String model, Integer dimension) {
+        var before = service.getCurrentSettings();
+        var request = new ModelProviderConfigService.UpdateScopeRequest("aliyun", List.of(
+                new ModelProviderConfigService.ProviderUpsertRequest("aliyun", "https://dashscope.aliyuncs.com/compatible-mode/v1", model, "", dimension, true)));
+        CustomException exception = assertThrows(CustomException.class,
+                () -> service.updateScope("embedding", request, "admin"));
+        assertEquals(HttpStatus.CONFLICT, exception.getStatus());
+        assertTrue(store.isEmpty(), "Unsafe changes must be rejected before persistence");
+        assertEquals(before, service.getCurrentSettings());
+    }
+
+    @Test
+    void shouldRetainDimensionWhenOmittedAndAllowCredentialRotation() {
+        var request = new ModelProviderConfigService.UpdateScopeRequest(" ALIYUN ", List.of(
+                new ModelProviderConfigService.ProviderUpsertRequest("aliyun", "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings/", " text-embedding-v4 ", "new-secret", null, true)));
+        service.updateScope("embedding", request, "admin");
+        var active = service.getActiveProvider("embedding");
+        assertEquals(2048, active.dimension());
+        assertEquals("text-embedding-v4", active.model());
+        assertEquals("new-secret", active.apiKey());
+    }
+
+    @Test
+    void shouldAllowEditingInactiveEmbeddingProviderWithoutChangingActiveModel() {
+        var request = new ModelProviderConfigService.UpdateScopeRequest("aliyun", List.of(
+                new ModelProviderConfigService.ProviderUpsertRequest("aliyun", "https://dashscope.aliyuncs.com/compatible-mode/v1", "text-embedding-v4", "", 2048, true),
+                new ModelProviderConfigService.ProviderUpsertRequest("zhipu", "https://open.bigmodel.cn/api/paas/v4", "future-model", "", 1024, true)));
+        service.updateScope("embedding", request, "admin");
+        assertEquals("text-embedding-v4", service.getActiveProvider("embedding").model());
+        assertEquals(1024, store.get("embedding:zhipu").getEmbeddingDimension());
+    }
+
+    @Test
     void shouldReuseStoredApiKeyWhenTestingConnectionWithBlankInput() throws Exception {
         AtomicReference<String> authorizationHeader = new AtomicReference<>();
         AtomicReference<String> requestPath = new AtomicReference<>();

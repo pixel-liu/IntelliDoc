@@ -89,10 +89,10 @@ public class ModelProviderConfigService {
         String currentActiveProvider = existingScope.activeProvider();
         ProviderConfigView currentActiveConfig = existingMap.get(currentActiveProvider);
 
-        if (SCOPE_EMBEDDING.equals(normalizedScope) && !Objects.equals(request.activeProvider(), currentActiveProvider)) {
-            ProviderUpsertRequest target = findProviderRequest(request.providers(), request.activeProvider());
+        if (SCOPE_EMBEDDING.equals(normalizedScope)) {
+            ProviderUpsertRequest target = findProviderRequest(request.providers(), normalizeProvider(request.activeProvider()));
             if (target != null && currentActiveConfig != null && requiresEmbeddingReindex(currentActiveConfig, target)) {
-                throw new CustomException("Embedding 模型切换需要重嵌入任务，当前版本不支持直接切换 active provider", HttpStatus.CONFLICT);
+                throw new CustomException("Embedding 模型切换需要重嵌入任务，当前版本不支持直接更改激活的 provider、模型或维度", HttpStatus.CONFLICT);
             }
         }
 
@@ -121,7 +121,7 @@ public class ModelProviderConfigService {
                     ? Optional.ofNullable(item.dimension()).orElse(fallback.dimension())
                     : null);
             entity.setEnabled(item.enabled() == null ? fallback.enabled() : item.enabled());
-            entity.setActive(provider.equals(request.activeProvider()));
+            entity.setActive(provider.equals(normalizeProvider(request.activeProvider())));
             entity.setUpdatedBy(updatedBy);
             entity.setApiKeyCiphertext(resolveCiphertext(item.apiKey(), fallback));
             repository.save(entity);
@@ -129,7 +129,7 @@ public class ModelProviderConfigService {
         }
 
         for (ModelProviderConfig entity : persistedMap.values()) {
-            boolean shouldBeActive = entity.getProviderCode().equals(request.activeProvider());
+            boolean shouldBeActive = entity.getProviderCode().equals(normalizeProvider(request.activeProvider()));
             if (entity.isActive() != shouldBeActive) {
                 entity.setActive(shouldBeActive);
                 entity.setUpdatedBy(updatedBy);
@@ -296,10 +296,11 @@ public class ModelProviderConfigService {
         if (!Objects.equals(current.provider(), normalizeProvider(target.provider()))) {
             return true;
         }
-        if (!Objects.equals(current.model(), target.model())) {
+        if (!Objects.equals(current.model(), target.model().trim())) {
             return true;
         }
-        return !Objects.equals(current.dimension(), target.dimension());
+        Integer effectiveDimension = target.dimension() == null ? current.dimension() : target.dimension();
+        return !Objects.equals(current.dimension(), effectiveDimension);
     }
 
     private Map<String, ProviderConfigView> toProviderMap(List<ProviderConfigView> providers) {

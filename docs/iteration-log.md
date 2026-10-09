@@ -17,3 +17,11 @@
 - 上传、下载、删除统一使用配置中的 MinIO bucket。同步更新两项已落后于实现的上传测试断言，保留存储完整性校验。
 - 验证：DocumentIsolationTest、DocumentIsolationRepositoryTest、VectorizationIsolationTest、UploadServiceTest、UploadControllerTest、BootstrapKnowledgeInitializerTest 共 20 项通过；H2 实测删除用户 1 后用户 2 的文件和向量仍保留。
 - 限制：H2 未覆盖 MySQL InnoDB 的并发间隙锁语义；ES/MinIO 使用 mock，需在真实环境验证并发删除与上传。外部存储不属于 JPA 原子事务；旧文件名对象保守保留，后续通过审计清理。
+
+## 2026-10-09 · P1 Embedding 模型变更保护
+
+- 对激活 Embedding 配置的 provider、模型名、向量维度统一检查；同 provider 下更换模型或维度同样返回 409，并明确提示需要重嵌入。
+- 校验发生在任何数据库写入之前，拒绝操作不改变内存配置；维度省略时沿用当前值，provider 和模型名按保存规则标准化。
+- 允许密钥轮换、规范化后的同一 API 地址保存、未激活 provider 的配置编辑，LLM 配置行为保持不变。
+- 验证：ModelProviderConfigServiceTest 共 10 项通过，包括原有 LLM 配置/连接测试和新增模型、维度、维度省略、密钥轮换及非激活 provider 场景。
+- 限制：本轮提供变更保护，不自动执行重嵌入或切换索引；真实模型连接需服务环境恢复后验证。
