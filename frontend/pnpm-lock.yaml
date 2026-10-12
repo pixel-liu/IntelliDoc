@@ -35,6 +35,9 @@ importers:
       '@vueuse/core':
         specifier: 13.1.0
         version: 13.1.0(vue@3.5.13(typescript@5.8.3))
+      axios:
+        specifier: 1.9.0
+        version: 1.9.0
       clipboard:
         specifier: 2.0.11
         version: 2.0.11
@@ -240,6 +243,9 @@ importers:
       axios-retry:
         specifier: 4.5.0
         version: 4.5.0(axios@1.9.0)
+      nanoid:
+        specifier: 5.1.5
+        version: 5.1.5
       qs:
         specifier: 6.14.0
         version: 6.14.0
@@ -318,7 +324,14 @@ importers:
         specifier: 6.0.1
         version: 6.0.1
 
-  packages/uno-preset: {}
+  packages/uno-preset:
+    dependencies:
+      '@unocss/core':
+        specifier: 66.1.1
+        version: 66.1.1
+      '@unocss/preset-uno':
+        specifier: 66.1.1
+        version: 66.1.1
 
   packages/utils:
     dependencies:

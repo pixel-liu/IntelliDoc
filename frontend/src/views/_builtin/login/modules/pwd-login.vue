@@ -89,7 +89,7 @@ async function handleSubmit() {
       </NCheckbox>
     </div>
     <div class="flex-col gap-6">
-      <NButton type="primary" size="large" round block :loading="authStore.loginLoading" @click="handleSubmit">
+      <NButton type="primary" size="large" block :loading="authStore.loginLoading" @click="handleSubmit">
         {{ $t('page.login.common.login') }}
       </NButton>
       <NButton block @click="toggleLoginModule('register')">

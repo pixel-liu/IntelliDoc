@@ -23,7 +23,6 @@ export default defineConfig<Theme>({
     }
   },
   shortcuts: {
-    'card-wrapper': 'rd-4 shadow-2xl dark:shadow-[0_25px_50px_-12px_rgba(27,27,27,0.1)]',
     'flex-cc': 'flex items-center justify-center'
   },
   transformers: [transformerDirectives(), transformerVariantGroup()],

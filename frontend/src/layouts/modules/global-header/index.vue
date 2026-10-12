@@ -29,7 +29,7 @@ const isDev = import.meta.env.DEV;
 </script>
 
 <template>
-  <DarkModeContainer class="ml-12 h-full flex-y-center justify-between bg-transparent">
+  <DarkModeContainer class="app-header h-full flex-y-center justify-between">
     <div id="header-extra" class="h-full flex-col justify-center"></div>
     <!-- <GlobalLogo v-if="showLogo" class="h-full" :style="{ width: themeStore.sider.width + 'px' }" /> -->
     <MenuToggler
@@ -43,7 +43,7 @@ const isDev = import.meta.env.DEV;
       <GlobalBreadcrumb v-if="!appStore.isMobile" class="ml-12px" />
     </div>
 -->
-    <div class="h-full flex-y-center justify-end px-6">
+    <div class="app-header__actions h-full flex-y-center justify-end px-5">
       <GlobalSearch />
       <FullScreen v-if="!appStore.isMobile" :full="isFullscreen" @click="toggle" />
       <LangSwitch
@@ -63,4 +63,21 @@ const isDev = import.meta.env.DEV;
   </DarkModeContainer>
 </template>
 
-<style scoped></style>
+<style scoped>
+.app-header {
+  border-bottom: 1px solid var(--id-line);
+  background: color-mix(in srgb, var(--id-paper) 94%, transparent);
+  padding-left: 18px;
+  backdrop-filter: blur(14px);
+}
+
+.app-header__actions {
+  gap: 2px;
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding-left: 8px;
+  }
+}
+</style>

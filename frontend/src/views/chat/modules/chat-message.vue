@@ -355,9 +355,9 @@ async function handleSourceFileClick(fileInfo: {
 </script>
 
 <template>
-  <div class="mb-8 flex-col gap-2">
-    <div v-if="msg.role === 'user'" class="flex items-center gap-4">
-      <NAvatar class="bg-success">
+  <div class="chat-message flex-col gap-2" :class="`chat-message--${msg.role}`">
+    <div v-if="msg.role === 'user'" class="chat-message__meta flex items-center">
+      <NAvatar class="chat-message__avatar">
         <SvgIcon icon="ph:user-circle" class="text-icon-large color-white" />
       </NAvatar>
       <div class="flex-col gap-1">
@@ -365,8 +365,8 @@ async function handleSourceFileClick(fileInfo: {
         <NText class="text-3 color-gray-500">{{ formatDate(msg.timestamp) }}</NText>
       </div>
     </div>
-    <div v-else class="flex items-center gap-4">
-      <NAvatar class="bg-primary">
+    <div v-else class="chat-message__meta flex items-center">
+      <NAvatar class="chat-message__avatar">
         <SystemLogo class="text-6 text-white" />
       </NAvatar>
       <div class="flex-col gap-1">
@@ -394,12 +394,12 @@ async function handleSourceFileClick(fileInfo: {
     <NText v-else-if="msg.status === 'error'" class="ml-12 mt-2 italic color-#d03050">
       {{ msg.content || '服务器繁忙，请稍后再试' }}
     </NText>
-    <div v-else-if="msg.role === 'assistant'" class="mt-2 pl-12" @click="handleContentClick">
+    <div v-else-if="msg.role === 'assistant'" class="chat-message__content mt-2 pl-12" @click="handleContentClick">
       <VueMarkdownIt :content="content" />
     </div>
-    <NText v-else-if="msg.role === 'user'" class="ml-12 mt-2 text-4">{{ content }}</NText>
-    <NDivider class="ml-12 w-[calc(100%-3rem)] mb-0! mt-2!" />
-    <div class="ml-12 flex gap-2">
+    <NText v-else-if="msg.role === 'user'" class="chat-message__user-content ml-12 mt-2 text-4">{{ content }}</NText>
+    <NDivider class="chat-message__divider ml-12 w-[calc(100%-3rem)] mb-0! mt-2!" />
+    <div class="chat-message__actions ml-12 flex gap-2">
       <NButton quaternary title="复制回答" aria-label="复制回答" @click="handleCopy(msg.content)">
         <template #icon>
           <icon-mynaui:copy />
@@ -437,18 +437,18 @@ async function handleSourceFileClick(fileInfo: {
 
 <style scoped lang="scss">
 :deep(.source-file-link) {
-  color: #1890ff;
+  color: var(--id-primary);
   cursor: pointer;
   text-decoration: underline;
   transition: color 0.2s;
 
   &:hover {
-    color: #40a9ff;
+    color: color-mix(in srgb, var(--id-primary) 74%, white);
     text-decoration: none;
   }
 
   &:active {
-    color: #096dd9;
+    color: var(--id-primary);
   }
 }
 
@@ -484,5 +484,61 @@ async function handleSourceFileClick(fileInfo: {
 .tool-event--failed {
   border-color: rgb(208 48 80 / 0.25);
   color: #d03050;
+}
+.chat-message {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.chat-message__meta {
+  gap: 12px;
+}
+
+.chat-message__avatar {
+  border: 1px solid color-mix(in srgb, var(--id-primary) 28%, var(--id-line));
+  color: var(--id-primary) !important;
+  background: var(--id-primary-quiet) !important;
+}
+
+.chat-message--user .chat-message__avatar {
+  border-color: color-mix(in srgb, var(--id-accent) 32%, var(--id-line));
+  color: var(--id-accent) !important;
+  background: color-mix(in srgb, var(--id-accent) 9%, var(--id-paper)) !important;
+}
+
+.chat-message__content {
+  color: var(--id-ink);
+}
+
+.chat-message__user-content {
+  display: block;
+  width: fit-content;
+  max-width: min(78%, 720px);
+  border: 1px solid var(--id-line);
+  border-radius: 3px 9px 9px 9px;
+  color: var(--id-ink);
+  background: color-mix(in srgb, var(--id-canvas) 62%, var(--id-paper));
+  padding: 10px 14px;
+  line-height: 1.7;
+}
+
+.chat-message__divider {
+  opacity: 0.62;
+}
+
+.chat-message__actions {
+  opacity: 0.58;
+  transition: opacity 140ms ease;
+}
+
+.chat-message:hover .chat-message__actions,
+.chat-message:focus-within .chat-message__actions {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .chat-message__user-content {
+    max-width: calc(100% - 48px);
+  }
 }
 </style>

@@ -511,8 +511,18 @@ async function onBeforeUpload(
 </script>
 
 <template>
-  <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <NCard title="文件列表" :bordered="false" size="small" class="sm:flex-1-hidden card-wrapper">
+  <div class="knowledge-page min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
+    <section class="knowledge-masthead">
+      <div>
+        <span class="knowledge-masthead__index">文档资产</span>
+        <h1>知识库</h1>
+        <p>集中管理可检索的文档、向量化状态与访问范围。</p>
+      </div>
+      <div class="knowledge-masthead__count">
+        当前可见 <strong>{{ tableTasks.length }}</strong> 份
+      </div>
+    </section>
+    <NCard title="知识库文档" :bordered="false" size="small" class="knowledge-table-card sm:flex-1-hidden card-wrapper">
       <template #header-extra>
         <TableHeaderOperation v-model:columns="columnChecks" :loading="loading" @add="handleUpload" @refresh="getList">
           <template #prefix>
@@ -571,9 +581,74 @@ async function onBeforeUpload(
   width: min(96vw, 1320px);
 }
 
+.knowledge-page {
+  min-height: 500px;
+}
+
+.knowledge-masthead {
+  display: flex;
+  min-height: 92px;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--id-line);
+  padding: 0 2px 18px;
+}
+
+.knowledge-masthead__index {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--id-primary);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+.knowledge-masthead h1 {
+  margin: 0;
+  color: var(--id-ink);
+  font-size: 27px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+}
+
+.knowledge-masthead p {
+  margin: 8px 0 0;
+  color: var(--id-ink-soft);
+}
+
+.knowledge-masthead__count {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--id-ink-soft);
+  font-size: 12px;
+}
+
+.knowledge-masthead__count strong {
+  color: var(--id-primary);
+  font-size: 26px;
+  font-weight: 620;
+}
+
+.knowledge-table-card {
+  min-height: 0;
+}
+
 .document-preview-modal-shell {
+  border: 1px solid var(--id-line);
+  border-radius: 12px;
   overflow: hidden;
-  border-radius: 32px;
-  box-shadow: 0 36px 120px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 28px 90px rgba(15, 35, 40, 0.22);
+}
+
+@media (max-width: 640px) {
+  .knowledge-masthead {
+    min-height: auto;
+    align-items: flex-start;
+  }
+
+  .knowledge-masthead__count {
+    display: none;
+  }
 }
 </style>

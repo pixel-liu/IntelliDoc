@@ -55,11 +55,11 @@ function formatDate(dateStr?: string) {
 
 <template>
   <div
-    class="relative h-full shrink-0 flex flex-col overflow-hidden border-r border-#eef0f4 bg-#f8f9fb transition-[width] duration-200 ease-out dark:border-#ffffff0f dark:bg-#ffffff05"
+    class="conversation-sidebar relative h-full shrink-0 flex flex-col overflow-hidden transition-[width] duration-200 ease-out"
     :class="collapsed ? 'w-0 min-w-0 border-r-0' : 'w-[260px] min-w-[260px]'"
   >
-    <div class="flex w-[260px] flex-1 flex-col overflow-hidden" :class="{ 'pointer-events-none invisible': collapsed }">
-    <div class="flex items-center justify-between px-4 pt-4 pb-2">
+    <div class="conversation-sidebar__inner flex w-[260px] flex-1 flex-col overflow-hidden" :class="{ 'pointer-events-none invisible': collapsed }">
+    <div class="conversation-sidebar__header flex items-center justify-between">
       <span class="text-15px font-600">对话列表</span>
       <div class="flex items-center gap-1">
         <NButton
@@ -82,7 +82,7 @@ function formatDate(dateStr?: string) {
     </div>
 
     <!-- Tabs -->
-    <div class="mx-4 mb-2 flex rounded-lg bg-[rgb(var(--border-color)/0.15)] p-0.5 dark:bg-[#FFFFFF0A]">
+    <div class="conversation-sidebar__tabs flex">
       <div
         class="flex-1 cursor-pointer rounded-md px-3 py-1.5 text-center text-12px font-500 transition-all"
         :class="activeTab === 'active'
@@ -104,7 +104,7 @@ function formatDate(dateStr?: string) {
     </div>
 
     <!-- List -->
-    <div class="flex-1 overflow-y-auto px-2">
+    <div class="conversation-sidebar__list flex-1 overflow-y-auto">
       <NSpin :show="sessionsLoading" class="h-full">
         <TransitionGroup name="session-list" tag="div">
           <div
@@ -118,9 +118,9 @@ function formatDate(dateStr?: string) {
           <div
             v-for="session in filteredSessions"
             :key="session.conversationId"
-            class="group mx-1 mb-0.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 transition-all"
+            class="conversation-session group flex cursor-pointer items-center gap-2.5 px-3 py-2.5 transition-all"
             :class="session.conversationId === conversationId
-              ? 'bg-[rgb(var(--primary-color)/0.08)]'
+              ? 'conversation-session--active bg-[rgb(var(--primary-color)/0.08)]'
               : 'hover:bg-[rgb(var(--border-color)/0.3)] dark:hover:bg-[#FFFFFF08]'"
             @click="handleSelect(session.conversationId)"
           >
@@ -179,6 +179,51 @@ function formatDate(dateStr?: string) {
 </template>
 
 <style scoped>
+.conversation-sidebar {
+  border-right: 1px solid var(--id-line) !important;
+  background: color-mix(in srgb, var(--id-canvas) 62%, var(--id-paper)) !important;
+}
+
+.conversation-sidebar__header {
+  min-height: 66px;
+  border-bottom: 1px solid var(--id-line);
+  padding: 15px 14px 12px;
+}
+
+.conversation-sidebar__tabs {
+  margin: 10px 12px 8px;
+  border: 1px solid var(--id-line);
+  border-radius: 7px;
+  background: var(--id-paper) !important;
+  padding: 3px;
+}
+
+.conversation-sidebar__tabs > div {
+  border-radius: 5px;
+  box-shadow: none !important;
+}
+
+.conversation-sidebar__list {
+  padding: 4px 8px 14px;
+}
+
+.conversation-session {
+  position: relative;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+
+.conversation-session:hover {
+  border-color: var(--id-line);
+  background: var(--id-paper) !important;
+}
+
+.conversation-session--active {
+  border-color: color-mix(in srgb, var(--id-primary) 26%, var(--id-line));
+  background: var(--id-primary-quiet) !important;
+}
+
 .session-list-enter-active,
 .session-list-leave-active {
   transition: all 0.2s ease;

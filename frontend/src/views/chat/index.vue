@@ -15,15 +15,13 @@ const sidebarCollapsed = ref(false);
   <div v-if="showReferencePreview" class="h-full">
     <ReferencePreviewPage />
   </div>
-  <div v-else class="h-full bg-layout p-3 pt-6">
-    <div
-      class="h-full flex overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_28px_rgba(15,23,42,0.06)] dark:bg-[#1c1c1c] dark:shadow-[0_1px_2px_rgba(0,0,0,0.5),0_8px_28px_rgba(0,0,0,0.3)]"
-    >
+  <div v-else class="chat-page">
+    <div class="chat-workbench">
       <ConversationSidebar v-model:collapsed="sidebarCollapsed" />
-      <div class="relative min-w-0 flex flex-col flex-1">
+      <div class="chat-main">
         <button
           v-show="sidebarCollapsed"
-          class="absolute left-3 top-3 z-20 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-white text-#666 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_4px_12px_rgba(15,23,42,0.08)] ring-1 ring-#0f172a14 transition-all duration-150 active:scale-95 hover:scale-105 dark:bg-#262626 dark:text-#bbb hover:text-[rgb(var(--primary-color))] dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.4)] dark:ring-#ffffff14"
+          class="chat-sidebar-trigger"
           aria-label="展开对话列表"
           @click="sidebarCollapsed = false"
         >
@@ -36,4 +34,76 @@ const sidebarCollapsed = ref(false);
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.chat-page {
+  height: 100%;
+  padding: 14px 18px 20px;
+  background: var(--id-canvas);
+}
+
+.chat-workbench {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+  border: 1px solid var(--id-line);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--id-paper);
+  box-shadow: 0 10px 35px rgba(20, 54, 54, 0.055);
+}
+
+.chat-workbench::before {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  width: 72px;
+  height: 3px;
+  background: var(--id-primary);
+  content: '';
+}
+
+.chat-main {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  background: var(--id-paper);
+}
+
+.chat-sidebar-trigger {
+  position: absolute;
+  z-index: 20;
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--id-line);
+  border-radius: 8px;
+  color: var(--id-ink-soft);
+  background: var(--id-paper);
+  box-shadow: 0 4px 12px rgba(20, 54, 54, 0.08);
+  cursor: pointer;
+}
+
+.chat-sidebar-trigger:hover {
+  border-color: var(--id-primary);
+  color: var(--id-primary);
+}
+
+@media (max-width: 640px) {
+  .chat-page {
+    padding: 0;
+  }
+
+  .chat-workbench {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+</style>

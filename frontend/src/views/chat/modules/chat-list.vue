@@ -73,7 +73,7 @@ const showEmpty = computed(() => !loading.value && list.value.length === 0);
 
 <template>
   <Suspense>
-    <div class="flex h-0 flex-1 flex-col">
+    <div class="chat-list flex h-0 flex-1 flex-col">
       <!-- Date filter in header -->
       <Teleport defer to="#header-extra">
         <div v-if="!showEmpty" class="flex items-center px-4">
@@ -86,8 +86,8 @@ const showEmpty = computed(() => !loading.value && list.value.length === 0);
       </Teleport>
 
       <!-- Empty state -->
-      <div v-if="showEmpty" class="flex flex-1 flex-col items-center justify-center gap-4">
-        <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-[rgb(var(--primary-color)/0.08)]">
+      <div v-if="showEmpty" class="chat-empty flex flex-1 flex-col items-center justify-center gap-4">
+        <div class="chat-empty__mark flex h-20 w-20 items-center justify-center">
           <icon-material-symbols:chat-outline-rounded class="text-36px text-[rgb(var(--primary-color)/0.5)]" />
         </div>
         <div class="text-15px font-500 color-#aaa">
@@ -101,7 +101,7 @@ const showEmpty = computed(() => !loading.value && list.value.length === 0);
       <!-- Message list -->
       <NScrollbar v-else ref="scrollbarRef" class="flex-1">
         <NSpin :show="loading">
-          <div class="mx-auto w-full max-w-[960px] px-4">
+          <div class="chat-message-stream mx-auto w-full">
             <VueMarkdownItProvider>
               <ChatMessage
                 v-for="(item, index) in list"
@@ -118,4 +118,35 @@ const showEmpty = computed(() => !loading.value && list.value.length === 0);
   </Suspense>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.chat-list {
+  background:
+    linear-gradient(var(--id-line), var(--id-line)) 28px 0 / 1px 100% no-repeat,
+    var(--id-paper);
+}
+
+.chat-empty {
+  color: var(--id-ink-soft);
+}
+
+.chat-empty__mark {
+  border: 1px solid color-mix(in srgb, var(--id-primary) 24%, var(--id-line));
+  border-radius: 10px 10px 10px 3px !important;
+  background: var(--id-primary-quiet) !important;
+}
+
+.chat-message-stream {
+  max-width: 920px;
+  padding: 28px 28px 8px 44px;
+}
+
+@media (max-width: 640px) {
+  .chat-list {
+    background: var(--id-paper);
+  }
+
+  .chat-message-stream {
+    padding: 20px 14px 8px;
+  }
+}
+</style>

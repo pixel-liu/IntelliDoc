@@ -375,18 +375,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative shrink-0 bg-white px-4 pb-3 pt-2 dark:bg-[#1c1c1c]">
+  <div class="input-dock">
+    <div class="input-dock__rule" />
     <div
-      class="pointer-events-none absolute inset-x-0 h-6 from-white/95 to-transparent bg-gradient-to-t -top-6 dark:from-[#1c1c1c]/95"
-    />
-    <div
-      class="chat-input-shell mx-auto max-w-[960px] w-full flex items-end gap-2 rounded-2xl bg-white px-3.5 py-2.5 dark:bg-[#1f1f1f]"
+      class="chat-input-shell mx-auto w-full flex items-end gap-2"
     >
       <textarea
         ref="inputRef"
         v-model.trim="input.message"
         placeholder="给 IntelliDoc 发送消息，Enter 发送，Shift+Enter 换行"
-        class="max-h-32 min-h-6 w-full flex-1 resize-none border-none bg-transparent py-1 text-14px color-#333 caret-[rgb(var(--primary-color))] outline-none placeholder:text-#bbb dark:color-#e1e1e1 dark:placeholder:text-#555"
+        class="chat-input w-full flex-1 resize-none border-none bg-transparent py-1 text-14px outline-none"
         @keydown="handShortcut"
       />
       <NButton
@@ -403,7 +401,7 @@ onUnmounted(() => {
         </template>
       </NButton>
     </div>
-    <div class="mx-auto mt-1.5 max-w-[960px] w-full flex items-center justify-between px-1">
+    <div class="input-dock__meta mx-auto mt-1.5 w-full flex items-center justify-between px-1">
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1">
           <span
@@ -426,26 +424,64 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.input-dock {
+  position: relative;
+  flex-shrink: 0;
+  border-top: 1px solid var(--id-line);
+  background: var(--id-paper);
+  padding: 14px 28px 12px 44px;
+}
+
+.input-dock__rule {
+  position: absolute;
+  top: -1px;
+  left: 44px;
+  width: 88px;
+  height: 2px;
+  background: var(--id-primary);
+}
+
 .chat-input-shell {
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 6px 18px rgba(15, 23, 42, 0.04);
+  max-width: 920px;
+  border: 1px solid var(--id-line-strong);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--id-paper);
+  padding: 10px 11px 10px 14px;
+  box-shadow: 0 4px 18px rgba(20, 54, 54, 0.045);
   transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background-color 0.18s ease;
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .chat-input-shell:focus-within {
-  border-color: rgb(var(--primary-color) / 0.38);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 8px 24px rgba(15, 23, 42, 0.06);
+  border-color: var(--id-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--id-primary) 12%, transparent);
 }
 
-.dark .chat-input-shell {
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: none;
+.chat-input {
+  max-height: 128px;
+  min-height: 26px;
+  color: var(--id-ink);
+  caret-color: var(--id-primary);
+  line-height: 1.65;
+}
+
+.chat-input::placeholder {
+  color: color-mix(in srgb, var(--id-ink-soft) 65%, transparent);
+}
+
+.input-dock__meta {
+  max-width: 920px;
+  color: var(--id-ink-soft);
+}
+
+@media (max-width: 640px) {
+  .input-dock {
+    padding: 12px 14px 10px;
+  }
+
+  .input-dock__rule {
+    left: 14px;
+  }
 }
 </style>

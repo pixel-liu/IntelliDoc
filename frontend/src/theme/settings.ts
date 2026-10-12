@@ -4,19 +4,19 @@ export const themeSettings: App.Theme.ThemeSetting = {
   grayscale: false,
   colourWeakness: false,
   recommendColor: true,
-  themeColor: '#646cff',
-  otherColor: { info: '#2080f0', success: '#52c41a', warning: '#faad14', error: '#f5222d' },
+  themeColor: '#0B7A75',
+  otherColor: { info: '#287C96', success: '#3E8065', warning: '#C47732', error: '#C65353' },
   isInfoFollowPrimary: true,
   resetCacheStrategy: 'close',
   layout: { mode: 'vertical', scrollMode: 'content', reverseHorizontalMix: false },
-  page: { animate: true, animateMode: 'fade-slide' },
-  header: { height: 56, breadcrumb: { visible: false, showIcon: true }, multilingual: { visible: false } },
+  page: { animate: false, animateMode: 'fade' },
+  header: { height: 64, breadcrumb: { visible: false, showIcon: true }, multilingual: { visible: false } },
   tab: { visible: false, cache: true, height: 44, mode: 'chrome' },
   fixedHeaderAndTab: true,
   sider: {
     inverted: false,
-    width: 180,
-    collapsedWidth: 64,
+    width: 216,
+    collapsedWidth: 68,
     mixWidth: 90,
     mixCollapsedWidth: 64,
     mixChildMenuWidth: 200
@@ -26,18 +26,30 @@ export const themeSettings: App.Theme.ThemeSetting = {
   tokens: {
     light: {
       colors: {
-        container: 'rgb(255, 255, 255)',
-        layout: 'rgb(247, 250, 252)',
-        inverted: 'rgb(0, 20, 40)',
-        'base-text': 'rgb(31, 31, 31)'
+        container: 'rgb(252, 253, 251)',
+        layout: 'rgb(240, 244, 241)',
+        inverted: 'rgb(20, 43, 51)',
+        'base-text': 'rgb(28, 45, 50)'
       },
       boxShadow: {
-        header: '0 1px 2px rgb(0, 21, 41, 0.08)',
-        sider: '2px 0 8px 0 rgb(29, 35, 41, 0.05)',
-        tab: '0 1px 2px rgb(0, 21, 41, 0.08)'
+        header: '0 1px 0 rgb(25, 62, 61, 0.08)',
+        sider: '1px 0 0 rgb(25, 62, 61, 0.10)',
+        tab: '0 1px 0 rgb(25, 62, 61, 0.08)'
       }
     },
-    dark: { colors: { container: 'rgb(28, 28, 28)', layout: 'rgb(18, 18, 18)', 'base-text': 'rgb(224, 224, 224)' } }
+    dark: {
+      colors: {
+        container: 'rgb(19, 30, 34)',
+        layout: 'rgb(13, 23, 27)',
+        inverted: 'rgb(10, 20, 24)',
+        'base-text': 'rgb(224, 233, 230)'
+      },
+      boxShadow: {
+        header: '0 1px 0 rgb(255, 255, 255, 0.06)',
+        sider: '1px 0 0 rgb(255, 255, 255, 0.06)',
+        tab: '0 1px 0 rgb(255, 255, 255, 0.06)'
+      }
+    }
   }
 };
 
