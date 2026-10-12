@@ -24,7 +24,8 @@ import java.util.function.Consumer;
 public class LlmProviderRouter {
 
     private static final Logger logger = LoggerFactory.getLogger(LlmProviderRouter.class);
-    private static final int REACT_HISTORY_MAX_MESSAGES = 6;
+    // Five user/assistant turns provide local context without letting prompts grow indefinitely.
+    private static final int REACT_HISTORY_MAX_MESSAGES = 10;
     private static final int REACT_HISTORY_MAX_CONTENT_CHARS = 800;
     private static final int DEFAULT_REACT_MAX_COMPLETION_TOKENS = 2000;
 
@@ -126,7 +127,7 @@ public class LlmProviderRouter {
         sysBuilder.append("本系统是「知识库优先」的问答助手：你的首要职责是基于本系统已收录的资料回答用户。除非命中下方明确的白名单，否则**每一个用户问题都必须先调用 search_knowledge**，再基于检索结果作答。\n\n")
                 .append("强制检索原则（默认行为）：\n")
                 .append("1. 默认调用 search_knowledge：只要问题涉及任何实体、名称、缩写、产品、项目、术语、流程、功能、实现、背景、对比、引用，或包含「这/它/该/上述/这个/那个」等上下文指代，无论你是否自认为已知答案，都必须先检索，不要等用户说「查知识库」。\n")
-                .append("2. 构造 query 时严格保留用户原话中的核心名词、缩写和限定词，禁止替换为泛化关键词；必要时可在同一次 query 中合并原句与等价改写。\n")
+                .append("2. 构造 query 时严格保留用户问题中的核心名词、缩写和限定词，禁止替换为泛化关键词；如仍有指代词，必须结合最近对话展开成明确实体，禁止直接用‘它/这个/上述’检索；必要时可在同一次 query 中合并问题与等价改写。\n")
                 .append("3. 用户要求整理、总结、归纳、提炼知识库内容时，先用 search_knowledge 圈定材料，再调用 generate_summary 生成总结。\n\n")
                 .append("可以跳过 search_knowledge 的白名单（必须严格匹配其一，否则一律检索）：\n")
                 .append("- 纯打招呼或寒暄（你好/谢谢/再见等）；\n")

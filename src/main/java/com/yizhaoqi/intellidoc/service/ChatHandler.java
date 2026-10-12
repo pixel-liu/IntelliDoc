@@ -56,6 +56,7 @@ public class ChatHandler {
     private final ChatGenerationStateService chatGenerationStateService;
     private final ChatSessionRegistry chatSessionRegistry;
     private final AgentToolRegistry agentToolRegistry;
+    private final CoreferenceResolutionService coreferenceResolutionService;
     private final ThreadPoolTaskExecutor chatMonitorExecutor;
     private final ObjectMapper objectMapper;
     
@@ -80,6 +81,7 @@ public class ChatHandler {
                       ChatGenerationStateService chatGenerationStateService,
                       ChatSessionRegistry chatSessionRegistry,
                       AgentToolRegistry agentToolRegistry,
+                       CoreferenceResolutionService coreferenceResolutionService,
                       ObjectMapper objectMapper,
                       @Qualifier("chatMonitorExecutor") ThreadPoolTaskExecutor chatMonitorExecutor) {
         this.redisTemplate = redisTemplate;
@@ -90,6 +92,7 @@ public class ChatHandler {
         this.chatGenerationStateService = chatGenerationStateService;
         this.chatSessionRegistry = chatSessionRegistry;
         this.agentToolRegistry = agentToolRegistry;
+        this.coreferenceResolutionService = coreferenceResolutionService;
         this.objectMapper = objectMapper;
         this.chatMonitorExecutor = chatMonitorExecutor;
     }
@@ -121,11 +124,19 @@ public class ChatHandler {
             // 2. 获取对话历史
             List<Map<String, String>> history = getConversationHistory(conversationId);
             logger.debug("获取到 {} 条历史对话", history.size());
+            CoreferenceResolutionService.ResolutionResult resolution =
+                    coreferenceResolutionService.resolve(conversationId, userMessage, history);
+            String resolvedUserMessage = resolution.resolvedMessage();
+            if (resolution.changed()) {
+                logger.info("完成会话指代消解: conversationId={}, references={}, resolvedMessage={}",
+                        conversationId, resolution.resolvedReferences(), resolvedUserMessage);
+            }
 
             // 3. 异步执行 ReAct 决策循环：模型按需返回 tool_calls，避免在 WebSocket 处理线程上阻塞 90s+ 的工具流
             try {
                 chatMonitorExecutor.execute(() ->
-                        runReActLoopSafely(userId, userMessage, finalConversationId, finalGenerationId, history, responseFuture));
+                        runReActLoopSafely(userId, userMessage, resolvedUserMessage,
+                                finalConversationId, finalGenerationId, history, responseFuture));
             } catch (RejectedExecutionException ex) {
                 logger.warn("聊天处理线程池已满，generationId: {}", finalGenerationId);
                 RuntimeException busyException = new RuntimeException("系统繁忙，请稍后重试");
@@ -148,13 +159,15 @@ public class ChatHandler {
     }
 
     private void runReActLoopSafely(String userId,
-                                    String userMessage,
+                                    String originalUserMessage,
+                                    String resolvedUserMessage,
                                     String conversationId,
                                     String generationId,
                                     List<Map<String, String>> history,
                                     CompletableFuture<String> responseFuture) {
         try {
-            runReActLoop(userId, userMessage, conversationId, generationId, history, responseFuture);
+            runReActLoop(userId, originalUserMessage, resolvedUserMessage,
+                    conversationId, generationId, history, responseFuture);
         } catch (Exception e) {
             logger.error("ReAct 循环执行失败: generationId={}", generationId, e);
             chatGenerationStateService.markFailed(generationId, e.getMessage());
@@ -165,13 +178,14 @@ public class ChatHandler {
     }
 
     private void runReActLoop(String userId,
-                              String userMessage,
+                              String originalUserMessage,
+                              String resolvedUserMessage,
                               String conversationId,
                               String generationId,
                               List<Map<String, String>> history,
                               CompletableFuture<String> responseFuture) {
         List<Map<String, Object>> messages = llmProviderRouter.buildReActMessages(
-                userMessage,
+                resolvedUserMessage,
                 "",
                 history,
                 buildRecentFeedbackGuidance(userId)
@@ -196,7 +210,7 @@ public class ChatHandler {
             totalCompletionTokens += turn.completionTokens();
 
             if (turn.toolCalls().isEmpty()) {
-                finalizeResponse(userId, userMessage, conversationId, generationId, responseFuture,
+                finalizeResponse(userId, originalUserMessage, conversationId, generationId, responseFuture,
                         responseBuilders.get(generationId),
                         new LlmProviderRouter.StreamCompletion(turn.finishReason(), totalPromptTokens, totalCompletionTokens, turn.content().length()));
                 return;
@@ -212,12 +226,13 @@ public class ChatHandler {
                     );
                     sendToolCallStatus(userId, generationId, conversationId, toolCall, "failed");
                 } else {
-                    executedToolResult = executeToolForReAct(userId, userMessage, generationId, conversationId, toolCall);
+                    executedToolResult = executeToolForReAct(userId, resolvedUserMessage,
+                            generationId, conversationId, toolCall);
                     executedToolCalls++;
                 }
                 messages.add(toolMessage(toolCall.id(), executedToolResult.content()));
                 if (executedToolResult.streamedToUser()) {
-                    finalizeResponse(userId, userMessage, conversationId, generationId, responseFuture,
+                    finalizeResponse(userId, originalUserMessage, conversationId, generationId, responseFuture,
                             responseBuilders.get(generationId),
                             new LlmProviderRouter.StreamCompletion(
                                     "tool_streamed",
@@ -242,7 +257,7 @@ public class ChatHandler {
         }
         totalPromptTokens += finalTurn.promptTokens();
         totalCompletionTokens += finalTurn.completionTokens();
-        finalizeResponse(userId, userMessage, conversationId, generationId, responseFuture,
+        finalizeResponse(userId, originalUserMessage, conversationId, generationId, responseFuture,
                 responseBuilders.get(generationId),
                 new LlmProviderRouter.StreamCompletion(finalTurn.finishReason(), totalPromptTokens, totalCompletionTokens, finalTurn.content().length()));
     }
