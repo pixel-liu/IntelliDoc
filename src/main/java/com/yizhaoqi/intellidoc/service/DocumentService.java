@@ -329,8 +329,9 @@ public class DocumentService {
             User user = resolveUser(userId);
             String userDbId = String.valueOf(user.getId());
             
-            List<String> userEffectiveTags = orgTagCacheService.getUserEffectiveOrgTags(user.getUsername());
-            logger.debug("用户有效组织标签: {}", userEffectiveTags);
+            List<String> userEffectiveTags = orgTagCacheService.getUserEffectiveOrgTags(user.getUsername()).stream()
+                    .filter(tag -> !tag.startsWith("PRIVATE_")).toList();
+            logger.debug("可共享组织标签: {}", userEffectiveTags);
             
             // 使用有效标签查询文件
             List<FileUpload> files;

@@ -34,7 +34,7 @@ class HybridSearchServiceTest {
         UserRepository users = mock(UserRepository.class); OrgTagCacheService orgs = mock(OrgTagCacheService.class);
         User user = new User(); user.setId(1L); user.setUsername("alice");
         when(users.findById(1L)).thenReturn(Optional.of(user));
-        when(orgs.getUserEffectiveOrgTags("alice")).thenReturn(List.of("TEAM_A"));
+        when(orgs.getUserEffectiveOrgTags("alice")).thenReturn(List.of("TEAM_A", "PRIVATE_alice", "PRIVATE_bob"));
         when(embedding.embed(anyList(), eq("1"), eq(EmbeddingClient.UsageType.QUERY)))
                 .thenReturn(List.of(new float[]{1f}));
         var properties = new HybridSearchProperties();
@@ -59,6 +59,7 @@ class HybridSearchServiceTest {
         for (var request : requests) {
             String json = request.toString();
             assertTrue(json.contains("userId")); assertTrue(json.contains("TEAM_A")); assertTrue(json.contains("public"));
+            assertFalse(json.contains("PRIVATE_alice")); assertFalse(json.contains("PRIVATE_bob"));
         }
     }
 
@@ -69,6 +70,7 @@ class HybridSearchServiceTest {
         assertTrue(service.searchWithPermission("question", "1", 5).isEmpty());
         assertEquals(1, requests.size());
         assertTrue(requests.get(0).toString().contains("TEAM_A"));
+        assertFalse(requests.get(0).toString().contains("PRIVATE_bob"));
     }
 
     @Test

@@ -67,6 +67,18 @@ class UserServiceTest {
     }
 
     @Test
+    void cannotAssignAnotherUsersPrivateTag() {
+        User admin = new User(); admin.setUsername("admin"); admin.setRole(User.Role.ADMIN);
+        User target = new User(); target.setUsername("bob"); target.setOrgTags("PRIVATE_bob");
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(target));
+        CustomException error = assertThrows(CustomException.class,
+                () -> userService.assignOrgTagsToUser(2L, List.of("PRIVATE_alice"), "admin"));
+        assertEquals(HttpStatus.FORBIDDEN, error.getStatus());
+        verify(userRepository, never()).save(target);
+    }
+
+    @Test
     void testRegisterUserSuccessWhenOpenRegistration() {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
         when(organizationTagRepository.existsByTagId("DEFAULT")).thenReturn(true);

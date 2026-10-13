@@ -28,6 +28,8 @@ class DocumentIsolationTest {
     @Mock StringRedisTemplate redis;
     @Mock ParseService parser;
     @Mock VectorizationService embedding;
+    @Mock UserRepository users;
+    @Mock OrgTagCacheService orgs;
     @InjectMocks DocumentService service;
 
     @BeforeEach
@@ -37,6 +39,16 @@ class DocumentIsolationTest {
         FileUpload file = new FileUpload(); file.setFileMd5("abc"); file.setUserId(user);
         file.setFileName("same.pdf"); file.setOrgTag("TEAM_" + user);
         return file;
+    }
+
+    @Test
+    void privateTagsDoNotGrantOtherUsersAccessToFiles() {
+        User user = new User(); user.setId(2L); user.setUsername("bob");
+        when(users.findById(2L)).thenReturn(Optional.of(user));
+        when(orgs.getUserEffectiveOrgTags("bob")).thenReturn(List.of("TEAM_A", "PRIVATE_alice", "PRIVATE_bob"));
+        when(files.findAccessibleFilesWithTags("2", List.of("TEAM_A"))).thenReturn(List.of());
+        assertTrue(service.getAccessibleFiles("2", "").isEmpty());
+        verify(files).findAccessibleFilesWithTags("2", List.of("TEAM_A"));
     }
 
     @Test

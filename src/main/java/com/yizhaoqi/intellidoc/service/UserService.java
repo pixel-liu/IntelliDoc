@@ -318,8 +318,12 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
         
-        // 验证所有标签是否存在
+        // A private tag can only belong to the user it was created for.
         for (String tagId : orgTags) {
+            if (tagId != null && tagId.startsWith(PRIVATE_TAG_PREFIX)
+                    && !tagId.equals(PRIVATE_TAG_PREFIX + user.getUsername())) {
+                throw new CustomException("Cannot assign another user's private tag", HttpStatus.FORBIDDEN);
+            }
             if (!organizationTagRepository.existsByTagId(tagId)) {
                 throw new CustomException("Organization tag " + tagId + " not found", HttpStatus.NOT_FOUND);
             }

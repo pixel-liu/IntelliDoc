@@ -418,8 +418,11 @@ public class HybridSearchService {
             
             // 通过orgTagCacheService获取用户的有效标签集合
             List<String> effectiveTags = orgTagCacheService.getUserEffectiveOrgTags(user.getUsername());
-            logger.debug("用户 {} 的有效组织标签: {}", user.getUsername(), effectiveTags);
-            return effectiveTags;
+            // Private spaces are accessible only through the uploader userId branch.
+            List<String> sharedTags = effectiveTags.stream()
+                    .filter(tag -> !tag.startsWith("PRIVATE_")).toList();
+            logger.debug("用户 {} 的可共享组织标签: {}", user.getUsername(), sharedTags);
+            return sharedTags;
         } catch (Exception e) {
             logger.error("获取用户有效组织标签失败: {}", e.getMessage(), e);
             return Collections.emptyList(); // 返回空列表作为默认值
