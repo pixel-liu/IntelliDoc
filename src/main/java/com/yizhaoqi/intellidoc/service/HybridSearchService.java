@@ -88,8 +88,8 @@ public class HybridSearchService {
                 return textOnlySearchWithPermission(query, userDbId, userEffectiveTags, topK);
             }
 
-            logger.debug("向量生成成功，开始执行 KNN + BM25 双路融合搜索，权重 KNN={}, BM25={}",
-                    searchProperties.getKnnWeight(), searchProperties.getBm25Weight());
+            logger.debug("向量生成成功，开始执行 KNN + BM25 双路融合搜索，fusion={}",
+                    searchProperties.getFusion());
 
             Query permissionFilter = buildPermissionFilter(userDbId, userEffectiveTags);
             List<SearchResult> results = fusedSearch(query, queryVector, topK, permissionFilter);
@@ -111,7 +111,7 @@ public class HybridSearchService {
     }
 
     /**
-     * 执行 KNN 和 BM25 两路独立召回，并对两路分数做 Min-Max 归一化后加权融合。
+     * 执行 KNN 和 BM25 两路独立召回，默认通过 RRF 按排名融合排序。
      * 权限过滤同时应用到两路召回，避免无权限文档进入候选集。
      */
     private List<SearchResult> fusedSearch(String query, List<Float> queryVector, int topK,

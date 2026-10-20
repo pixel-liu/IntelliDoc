@@ -1,6 +1,6 @@
 # RAG 检索评测与迭代
 
-本轮提供可复现的检索质量基线、回归门槛和融合算法实验入口。默认仍是原来的 Min-Max 加权融合（向量 0.3、BM25 0.7）；RRF 尚未经过真实业务数据评测，不能据此宣称效果提升。
+本轮提供可复现的检索质量基线、回归门槛和融合算法配置入口。混合检索默认使用 RRF 融合排序（排名常数 60），按 KNN 与 BM25 各自的排名等权累加，不再默认使用 Min-Max 加权融合。可通过 `SEARCH_HYBRID_FUSION=WEIGHTED` 显式切回加权模式（向量 0.3、BM25 0.7）。RRF 尚未经过真实业务数据评测，不能据此宣称效果提升。
 
 ## 1. 离线验证工具
 
@@ -34,7 +34,7 @@ python scripts/rag_eval.py --dataset docs/rag-evaluation/cases.example.jsonl --r
 前提：本地 MySQL、Redis、ES、Kafka、MinIO、后端均已正常运行，知识库处理完成；JWT 必须有效且对应样本用户。采集会调用 Embedding 并计入现有配额。
 
 ```powershell
-python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-base http://localhost:8081/api/v1 --k 5 --label weighted-default-index-v1 --capture .runtime/rag-evaluation/weighted-results.jsonl --out .runtime/rag-evaluation/weighted-report.json
+python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-base http://localhost:8081/api/v1 --k 5 --label rrf-default-index-v1 --capture .runtime/rag-evaluation/rrf-results.jsonl --out .runtime/rag-evaluation/rrf-report.json
 ```
 
 报告/采集文件不写入 JWT 或文档正文，只保留文件标识、切片编号、分数、页码、检索模式与耗时。实际业务问题和文件标识仍属于内部数据，应保留在被 Git 忽略的 `.runtime` 下。
@@ -47,7 +47,7 @@ python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-b
 
 | 环境变量 | 默认值 | 作用 |
 | --- | --- | --- |
-| `SEARCH_HYBRID_FUSION` | `WEIGHTED` | `WEIGHTED` 或 `RRF` |
+| `SEARCH_HYBRID_FUSION` | `RRF` | `RRF`（默认）或 `WEIGHTED` |
 | `SEARCH_HYBRID_KNN_WEIGHT` | `0.3` | 加权模式向量权重，范围 0–1 |
 | `SEARCH_HYBRID_BM25_WEIGHT` | `0.7` | 加权模式 BM25 权重，范围 0–1，两权重不能同时为 0 |
 | `SEARCH_HYBRID_RECALL_MULTIPLIER` | `30` | 每路候选数为 topK × 倍率，范围 1–100 |
@@ -55,10 +55,10 @@ python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-b
 
 标准 RRF 的每路贡献为 `1 / (rankConstant + rank)`，按排名融合，忽略原始分数及加权模式权重。本项目在 Java 中实现融合，不依赖 ES 的新版本 retriever API。算法参考：[Elastic RRF 文档](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion)。
 
-配置通过 Spring 启动时绑定，不是管理页面中的动态开关。按仓库运行约定由 IDE 使配置生效；不要在没有确认运行方式时直接重启服务。改动一项参数后使用同一用户、索引快照、模型版本和数据集重新采集：
+配置通过 Spring 启动时绑定，不是管理页面中的动态开关。按仓库运行约定由 IDE 使配置生效；不要在没有确认运行方式时直接重启服务。例如，设置 `SEARCH_HYBRID_FUSION=WEIGHTED` 后，使用同一用户、索引快照、模型版本和数据集采集加权模式，并与默认 RRF 基线对比：
 
 ```powershell
-python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-base http://localhost:8081/api/v1 --k 5 --label rrf-index-v1 --capture .runtime/rag-evaluation/rrf-results.jsonl --baseline .runtime/rag-evaluation/weighted-report.json --max-regression 0.02 --out .runtime/rag-evaluation/rrf-report.json
+python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-base http://localhost:8081/api/v1 --k 5 --label weighted-index-v1 --capture .runtime/rag-evaluation/weighted-results.jsonl --baseline .runtime/rag-evaluation/rrf-report.json --max-regression 0.02 --out .runtime/rag-evaluation/weighted-report.json
 ```
 
 记录每次使用的模型、索引版本、配置和样本修订，写入 `--label` 或配套实验记录，避免索引更新和参数变更混在一起。加权融合与 RRF 并非天然优劣关系，应依据业务验收集决定是否上线。新增重排序模型前先保留当前两种方案的可复现结果，再评估增加的调用成本与延迟。
@@ -66,7 +66,7 @@ python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --api-b
 离线重算同一份采集：
 
 ```powershell
-python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --results .runtime/rag-evaluation/rrf-results.jsonl --k 5 --baseline .runtime/rag-evaluation/weighted-report.json --out .runtime/rag-evaluation/replay-report.json
+python scripts/rag_eval.py --dataset .runtime/rag-evaluation/cases.jsonl --results .runtime/rag-evaluation/weighted-results.jsonl --k 5 --baseline .runtime/rag-evaluation/rrf-report.json --out .runtime/rag-evaluation/replay-report.json
 ```
 
 ## 5. 指标与门槛

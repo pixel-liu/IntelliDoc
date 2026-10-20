@@ -6,14 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
-/** Retrieval experiments keep the current weighted ranking as the default. */
+/** Hybrid retrieval defaults to reciprocal rank fusion (RRF). */
 @Data
 @Validated
 @Component
 @ConfigurationProperties(prefix = "search.hybrid")
 public class HybridSearchProperties {
     public enum Fusion { WEIGHTED, RRF }
-    @NotNull private Fusion fusion = Fusion.WEIGHTED;
+    @NotNull private Fusion fusion = Fusion.RRF;
     @DecimalMin("0.0") @DecimalMax("1.0") private double knnWeight = 0.3d;
     @DecimalMin("0.0") @DecimalMax("1.0") private double bm25Weight = 0.7d;
     @Min(1) @Max(100) private int recallMultiplier = 30;

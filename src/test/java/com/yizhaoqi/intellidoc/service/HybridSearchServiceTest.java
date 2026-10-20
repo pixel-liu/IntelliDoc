@@ -3,11 +3,14 @@ package com.yizhaoqi.intellidoc.service;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.yizhaoqi.intellidoc.client.EmbeddingClient;
 import com.yizhaoqi.intellidoc.config.HybridSearchProperties;
 import com.yizhaoqi.intellidoc.entity.EsDocument;
 import com.yizhaoqi.intellidoc.exception.CustomException;
 import com.yizhaoqi.intellidoc.model.User;
+import com.yizhaoqi.intellidoc.model.FileUpload;
+import com.yizhaoqi.intellidoc.repository.FileUploadRepository;
 import com.yizhaoqi.intellidoc.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,6 +64,46 @@ class HybridSearchServiceTest {
             assertTrue(json.contains("userId")); assertTrue(json.contains("TEAM_A")); assertTrue(json.contains("public"));
             assertFalse(json.contains("PRIVATE_alice")); assertFalse(json.contains("PRIVATE_bob"));
         }
+    }
+
+    @Test
+    void defaultRrfPromotesSharedHitsAndPreservesReferenceMetadata() throws Exception {
+        EsDocument shared = new EsDocument("shared", "file-md5", 7, "matched evidence",
+                3, "page anchor", null, null, "1", "TEAM_A", false);
+        EsDocument vectorFirst = new EsDocument();
+        EsDocument textFirst = new EsDocument();
+        var knn = List.of(
+                Hit.of(h -> h.index("knowledge_base").id("vector").score(.99).source(vectorFirst)),
+                Hit.of(h -> h.index("knowledge_base").id("shared").score(.98).source(shared)));
+        var bm25 = List.of(
+                Hit.of(h -> h.index("knowledge_base").id("text").score(1000d).source(textFirst)),
+                Hit.of(h -> h.index("knowledge_base").id("shared").score(1d).source(shared)));
+        doAnswer(invocation -> {
+            SearchRequest request = invocation.getArgument(0, SearchRequest.class);
+            requests.add(request);
+            return SearchResponse.of(s -> s.took(1).timedOut(false)
+                    .shards(sh -> sh.total(1).successful(1).failed(0))
+                    .hits(h -> h.hits(request.knn().isEmpty() ? bm25 : knn)));
+        }).when(transport).performRequest(any(SearchRequest.class), any(), any());
+        var files = mock(FileUploadRepository.class);
+        FileUpload upload = new FileUpload();
+        upload.setFileMd5("file-md5"); upload.setFileName("evidence.pdf");
+        when(files.findByFileMd5In(anyList())).thenReturn(List.of(upload));
+        ReflectionTestUtils.setField(service, "fileUploadRepository", files);
+
+        var results = service.searchWithPermission("question", "1", 1);
+
+        assertEquals(2, requests.size());
+        assertEquals(1, results.size());
+        var result = results.get(0);
+        assertEquals("file-md5", result.getFileMd5());
+        assertEquals(7, result.getChunkId());
+        assertEquals(2d / 62, result.getScore(), 1e-12);
+        assertEquals("evidence.pdf", result.getFileName());
+        assertEquals(3, result.getPageNumber());
+        assertEquals("page anchor", result.getAnchorText());
+        assertEquals("matched evidence", result.getMatchedChunkText());
+        assertEquals("HYBRID", result.getRetrievalMode());
     }
 
     @Test

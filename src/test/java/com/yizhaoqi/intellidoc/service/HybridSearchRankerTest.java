@@ -14,8 +14,9 @@ class HybridSearchRankerTest {
         return Hit.of(h -> h.index("knowledge_base").id(id).score(score).source(doc));
     }
     @Test
-    void defaultWeightsRetainCurrentMinMaxRanking() {
+    void explicitWeightedFusionRetainsMinMaxRanking() {
         var properties = new HybridSearchProperties();
+        properties.setFusion(HybridSearchProperties.Fusion.WEIGHTED);
         var ranked = new HybridSearchRanker(properties).rank(
                 List.of(hit("a", 10), hit("b", 0)), List.of(hit("b", 20), hit("a", 0)), 5);
         assertEquals(List.of("b", "a"), ranked.stream().map(HybridSearchRanker.RankedDocument::key).toList());
@@ -23,8 +24,8 @@ class HybridSearchRankerTest {
         assertEquals(.3, ranked.get(1).score(), 1e-12);
     }
     @Test
-    void rrfCombinesRanksRegardlessOfIncompatibleScoreScales() {
-        var properties = new HybridSearchProperties(); properties.setFusion(HybridSearchProperties.Fusion.RRF);
+    void defaultRrfCombinesRanksRegardlessOfIncompatibleScoreScales() {
+        var properties = new HybridSearchProperties();
         var ranked = new HybridSearchRanker(properties).rank(
                 List.of(hit("a", .99), hit("b", .98), hit("c", .97)),
                 List.of(hit("b", 1000), hit("c", 5), hit("a", 1)), 2);

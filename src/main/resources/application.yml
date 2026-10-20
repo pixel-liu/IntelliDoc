@@ -260,10 +260,10 @@ wx:
     #退款通知地址
     refundNotifyUrl: ${WX_PAY_REFUND_NOTIFY_URL:http://localhost:8081/api/v1/recharge/refund-callback}
 
-# Evaluate alternative retrieval settings against a labelled dataset before rollout.
+# RRF combines KNN and BM25 ranks with equal channel contributions.
 search:
   hybrid:
-    fusion: ${SEARCH_HYBRID_FUSION:WEIGHTED}
+    fusion: ${SEARCH_HYBRID_FUSION:RRF}
     knn-weight: ${SEARCH_HYBRID_KNN_WEIGHT:0.3}
     bm25-weight: ${SEARCH_HYBRID_BM25_WEIGHT:0.7}
     recall-multiplier: ${SEARCH_HYBRID_RECALL_MULTIPLIER:30}
