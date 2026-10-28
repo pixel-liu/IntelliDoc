@@ -76,6 +76,9 @@ frontend/AutoClaw.pem
 *.pem
 src/main/resources/cert
 /.runtime
+/build
+/deploy/.env.infrastructure
+/deploy/app.env
 
 # Generated and local project metadata
 /.qoder/

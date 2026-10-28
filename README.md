@@ -84,6 +84,17 @@ docker compose up -d
 ./infra.sh logs elasticsearch
 ```
 
+Windows 本地开发可使用一键脚本；它会复用已启动的服务，并只记录自己启动的进程：
+
+```powershell
+.\scripts\start-local.ps1
+.\scripts\stop-local.ps1
+```
+
+停止脚本会停止启动脚本登记的前后端、Kafka、MinIO 和 Elasticsearch；不会停止脚本运行前已存在的服务。
+
+若 Kafka 的本地数据目录已经损坏，启动脚本会保留数据并报告失败；不会自动删除 topic 或消费位点。
+
 ### 3. 启动后端
 
 ```bash

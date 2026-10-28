@@ -38,7 +38,6 @@ spring:
       acks: all
       retries: 3
       enable-idempotence: true
-      transactional-id-prefix: file-upload-tx-
       properties:
         client.dns.lookup: use_all_dns_ips
     consumer:
@@ -56,6 +55,7 @@ spring:
       # 单节点 Docker 环境通常保持 1/1 即可
       partitions: ${SPRING_KAFKA_TOPIC_PARTITIONS:1}
       replication-factor: ${SPRING_KAFKA_TOPIC_REPLICATION_FACTOR:1}
+      min-insync-replicas: ${SPRING_KAFKA_TOPIC_MIN_INSYNC_REPLICAS:1}
   webflux:
     client:
       max-in-memory-size: 16MB

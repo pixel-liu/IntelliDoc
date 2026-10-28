@@ -36,6 +36,9 @@ class HybridSearchPropertiesTest {
             var properties = context.getBean(HybridSearchProperties.class);
             assertEquals(HybridSearchProperties.Fusion.RRF, properties.getFusion());
             assertEquals(60, properties.getRrfRankConstant());
+            assertEquals(0.02d, properties.getRrfMinScore());
+            assertEquals(0.3d, properties.getWeightedMinScore());
+            assertEquals(0.02d, properties.minimumScore());
         });
     }
 
@@ -48,6 +51,7 @@ class HybridSearchPropertiesTest {
                     assertEquals("WEIGHTED", context.getEnvironment().getProperty("search.hybrid.fusion"));
                     assertEquals(HybridSearchProperties.Fusion.WEIGHTED,
                             context.getBean(HybridSearchProperties.class).getFusion());
+                    assertEquals(0.3d, context.getBean(HybridSearchProperties.class).minimumScore());
                 });
     }
 

@@ -152,10 +152,12 @@ public class HybridSearchService {
 
         List<Hit<EsDocument>> knnHits = validHits(knnResponse);
         List<Hit<EsDocument>> bm25Hits = validHits(bm25Response);
-        List<SearchResult> results = ranker.rank(knnHits, bm25Hits, topK).stream()
+        List<HybridSearchRanker.RankedDocument> ranked = ranker.rank(knnHits, bm25Hits, topK);
+        List<SearchResult> results = ranked.stream()
                 .map(hit -> toSearchResult(hit.source(), hit.score())).toList();
-        logger.debug("双路召回完成: fusion={}, KNN候选={}, BM25候选={}, 返回={}",
-                searchProperties.getFusion(), knnHits.size(), bm25Hits.size(), results.size());
+        logger.debug("双路召回完成并过滤低分片段: fusion={}, minScore={}, KNN候选={}, BM25候选={}, 返回={}",
+                searchProperties.getFusion(), searchProperties.minimumScore(),
+                knnHits.size(), bm25Hits.size(), results.size());
         return results;
     }
 

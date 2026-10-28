@@ -1,10 +1,10 @@
 package com.yizhaoqi.intellidoc.controller;
 
-import com.yizhaoqi.intellidoc.config.KafkaConfig;
 import com.yizhaoqi.intellidoc.model.FileUpload;
 import com.yizhaoqi.intellidoc.model.OrganizationTag;
 import com.yizhaoqi.intellidoc.repository.FileUploadRepository;
 import com.yizhaoqi.intellidoc.service.FileTypeValidationService;
+import com.yizhaoqi.intellidoc.service.FileProcessingOutboxService;
 import com.yizhaoqi.intellidoc.service.ParseService;
 import com.yizhaoqi.intellidoc.service.UploadService;
 import com.yizhaoqi.intellidoc.service.UserService;
@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -31,10 +30,7 @@ class UploadControllerTest {
     private UploadService uploadService;
 
     @Mock
-    private KafkaTemplate<String, Object> kafkaTemplate;
-
-    @Mock
-    private KafkaConfig kafkaConfig;
+    private FileProcessingOutboxService processingOutbox;
 
     @Mock
     private UserService userService;
@@ -53,8 +49,7 @@ class UploadControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        uploadController = new UploadController(uploadService, kafkaTemplate);
-        ReflectionTestUtils.setField(uploadController, "kafkaConfig", kafkaConfig);
+        uploadController = new UploadController(uploadService, processingOutbox);
         ReflectionTestUtils.setField(uploadController, "userService", userService);
         ReflectionTestUtils.setField(uploadController, "fileUploadRepository", fileUploadRepository);
         ReflectionTestUtils.setField(uploadController, "fileTypeValidationService", fileTypeValidationService);
@@ -164,6 +159,6 @@ class UploadControllerTest {
         assertEquals("文件已完成合并", response.getBody().get("message"));
         assertEquals("https://example.com/merged/md5", ((Map<?, ?>) response.getBody().get("data")).get("object_url"));
         verify(uploadService, never()).mergeChunks(anyString(), anyString(), anyString());
-        verify(kafkaTemplate, never()).executeInTransaction(any());
+        verify(processingOutbox).ensureUploadTask("md5", "1");
     }
 }

@@ -1,4 +1,10 @@
 spring:
+  kafka:
+    topic:
+      # Requires at least three Kafka brokers. Explicit env overrides are for
+      # deliberate single-node deployments, with reduced durability.
+      replication-factor: ${SPRING_KAFKA_TOPIC_REPLICATION_FACTOR:3}
+      min-insync-replicas: ${SPRING_KAFKA_TOPIC_MIN_INSYNC_REPLICAS:2}
   jpa:
     hibernate:
       ddl-auto: update

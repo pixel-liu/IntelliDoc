@@ -37,7 +37,6 @@ const sidebarCollapsed = ref(false);
 <style scoped>
 .chat-page {
   height: 100%;
-  padding: 14px 18px 20px;
   background: var(--id-canvas);
 }
 
@@ -47,20 +46,8 @@ const sidebarCollapsed = ref(false);
   overflow: hidden;
   height: 100%;
   border: 1px solid var(--id-line);
-  border-radius: 12px 12px 12px 4px;
+  border-radius: 8px;
   background: var(--id-paper);
-  box-shadow: 0 10px 35px rgba(20, 54, 54, 0.055);
-}
-
-.chat-workbench::before {
-  position: absolute;
-  z-index: 5;
-  top: 0;
-  left: 0;
-  width: 72px;
-  height: 3px;
-  background: var(--id-primary);
-  content: '';
 }
 
 .chat-main {
@@ -78,15 +65,14 @@ const sidebarCollapsed = ref(false);
   top: 14px;
   left: 14px;
   display: inline-flex;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--id-line);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--id-ink-soft);
   background: var(--id-paper);
-  box-shadow: 0 4px 12px rgba(20, 54, 54, 0.08);
   cursor: pointer;
 }
 
@@ -97,7 +83,8 @@ const sidebarCollapsed = ref(false);
 
 @media (max-width: 640px) {
   .chat-page {
-    padding: 0;
+    margin: -12px;
+    height: calc(100% + 24px);
   }
 
   .chat-workbench {

@@ -120,9 +120,7 @@ const showEmpty = computed(() => !loading.value && list.value.length === 0);
 
 <style scoped lang="scss">
 .chat-list {
-  background:
-    linear-gradient(var(--id-line), var(--id-line)) 28px 0 / 1px 100% no-repeat,
-    var(--id-paper);
+  background: var(--id-paper);
 }
 
 .chat-empty {
@@ -130,14 +128,15 @@ const showEmpty = computed(() => !loading.value && list.value.length === 0);
 }
 
 .chat-empty__mark {
-  border: 1px solid color-mix(in srgb, var(--id-primary) 24%, var(--id-line));
-  border-radius: 10px 10px 10px 3px !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 8px 8px 8px 2px !important;
   background: var(--id-primary-quiet) !important;
 }
 
 .chat-message-stream {
-  max-width: 920px;
-  padding: 28px 28px 8px 44px;
+  max-width: 820px;
+  padding: 28px 24px 8px;
 }
 
 @media (max-width: 640px) {

@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 @Service
 public class AgentToolRegistry {
 
+    public static final String NO_KNOWLEDGE_RESULT = "知识库未检索到相关内容";
     private static final String KNOWLEDGE_INDEX = "knowledge_base";
     private static final int DEFAULT_TOP_K = 5;
     private static final int MAX_SEARCH_DOCS = 20;
@@ -108,12 +109,17 @@ public class AgentToolRegistry {
         int maxDocs = getInt(arguments, "maxDocs", DEFAULT_TOP_K, 1, MAX_SEARCH_DOCS);
 
         List<SearchResult> results = hybridSearchService.searchWithPermission(topic, userId, maxDocs);
-        String summary = deepSeekClient.summarize(userId, topic, results, onChunk);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("topic", topic);
         data.put("maxDocs", maxDocs);
         data.put("sourceCount", results.size());
         data.put("sources", results);
+
+        if (results.isEmpty()) {
+            return new ToolExecutionResult("generate_summary", true, NO_KNOWLEDGE_RESULT, data);
+        }
+
+        String summary = deepSeekClient.summarize(userId, topic, results, onChunk);
 
         String content = "主题：" + topic + "\n"
                 + "检索片段数：" + results.size() + "\n\n"
@@ -244,7 +250,7 @@ public class AgentToolRegistry {
 
     private String formatSearchResults(List<SearchResult> results) {
         if (results == null || results.isEmpty()) {
-            return "未检索到相关知识库片段。";
+            return NO_KNOWLEDGE_RESULT;
         }
 
         StringBuilder output = new StringBuilder("检索到 ").append(results.size()).append(" 个知识库片段。")

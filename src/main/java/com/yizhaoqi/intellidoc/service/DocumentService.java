@@ -1,7 +1,5 @@
 package com.yizhaoqi.intellidoc.service;
 
-import com.yizhaoqi.intellidoc.config.KafkaConfig;
-import com.yizhaoqi.intellidoc.model.FileProcessingTask;
 import com.yizhaoqi.intellidoc.model.FileUpload;
 import com.yizhaoqi.intellidoc.model.User;
 import com.yizhaoqi.intellidoc.repository.DocumentVectorRepository;
@@ -18,7 +16,6 @@ import org.apache.tika.exception.TikaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -94,10 +91,7 @@ public class DocumentService {
     private VectorizationService vectorizationService;
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
-
-    @Autowired
-    private KafkaConfig kafkaConfig;
+    private FileProcessingOutboxService processingOutbox;
 
     /**
      * 删除文档及其相关数据
@@ -145,7 +139,7 @@ public class DocumentService {
     public VectorizationService.VectorizationUsageResult reindexDocument(String fileMd5, String ownerUserId, String requesterId) {
         logger.info("开始重建文档索引: fileMd5={}, requesterId={}", fileMd5, requesterId);
 
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
+        FileUpload fileUpload = fileUploadRepository.findForProcessing(fileMd5, ownerUserId)
                 .orElseThrow(() -> new RuntimeException("文件不存在"));
 
         markVectorizationProcessing(fileUpload, true);
@@ -198,29 +192,7 @@ public class DocumentService {
 
     @Transactional
     public FileUpload enqueueAsyncVectorizationRetry(String fileMd5, String ownerUserId, String requesterId) {
-        FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, ownerUserId)
-                .orElseThrow(() -> new RuntimeException("文件不存在"));
-
-        markVectorizationProcessing(fileUpload, true);
-
-        FileProcessingTask task = new FileProcessingTask(
-                fileUpload.getFileMd5(),
-                null,
-                fileUpload.getFileName(),
-                fileUpload.getUserId(),
-                fileUpload.getOrgTag(),
-                fileUpload.isPublic(),
-                FileProcessingTask.TASK_TYPE_REINDEX,
-                requesterId
-        );
-
-        kafkaTemplate.executeInTransaction(kt -> {
-            kt.send(kafkaConfig.getFileProcessingTopic(), task);
-            return true;
-        });
-
-        logger.info("已发送异步向量化重试任务: fileMd5={}, requesterId={}", fileMd5, requesterId);
-        return fileUpload;
+        return processingOutbox.enqueueRetry(fileMd5, ownerUserId, requesterId);
     }
 
     @Transactional

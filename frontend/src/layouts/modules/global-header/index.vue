@@ -66,13 +66,13 @@ const isDev = import.meta.env.DEV;
 <style scoped>
 .app-header {
   border-bottom: 1px solid var(--id-line);
-  background: color-mix(in srgb, var(--id-paper) 94%, transparent);
-  padding-left: 18px;
-  backdrop-filter: blur(14px);
+  background: var(--id-paper);
+  padding-left: 14px;
 }
 
 .app-header__actions {
-  gap: 2px;
+  gap: 1px;
+  padding-right: 14px !important;
 }
 
 @media (max-width: 640px) {

@@ -37,35 +37,26 @@ const menuWrapperClass = computed(() => (showLogo.value ? 'flex-1-hidden' : 'h-f
   background: var(--id-paper);
 }
 
-.app-sider::after {
-  position: absolute;
-  z-index: 3;
-  top: 22px;
-  right: -1px;
-  width: 2px;
-  height: 40px;
-  background: var(--id-primary);
-  content: '';
-}
-
 .app-sider__menu {
-  padding: 12px 10px 54px;
+  padding: 10px 8px 48px;
 }
 
 :deep(.n-menu-item) {
-  margin: 3px 0;
+  margin: 2px 0;
 }
 
 :deep(.n-menu-item-content) {
-  border-radius: 7px;
+  min-height: 38px;
+  border-radius: 5px;
 }
 
 :deep(.n-menu-item-content::before) {
-  border-radius: 7px !important;
+  border-radius: 5px !important;
 }
 
 :deep(.n-menu-item-content-header) {
-  font-weight: 520;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 :deep(.n-menu-item-content--selected) {
@@ -74,11 +65,11 @@ const menuWrapperClass = computed(() => (showLogo.value ? 'flex-1-hidden' : 'h-f
 
 :deep(.n-menu-item-content--selected)::after {
   position: absolute;
-  left: 0;
+  left: -8px;
   width: 3px;
-}
-</style>
   height: 20px;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 2px 2px 0;
   background: var(--id-primary);
   content: '';
+}
+</style>

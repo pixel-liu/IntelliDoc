@@ -16,6 +16,10 @@ import java.util.Set;
 
 @Repository
 public interface FileUploadRepository extends JpaRepository<FileUpload, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select f from FileUpload f where f.fileMd5 = :md5 and f.userId = :userId")
+    Optional<FileUpload> findForProcessing(@Param("md5") String md5, @Param("userId") String userId);
+
     Optional<FileUpload> findFirstByFileMd5OrderByCreatedAtDesc(String fileMd5);
 
     List<FileUpload> findAllByFileMd5(String fileMd5);

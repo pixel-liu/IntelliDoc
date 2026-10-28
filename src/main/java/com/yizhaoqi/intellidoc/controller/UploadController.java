@@ -1,12 +1,11 @@
 package com.yizhaoqi.intellidoc.controller;
 
-import com.yizhaoqi.intellidoc.config.KafkaConfig;
 import com.yizhaoqi.intellidoc.exception.CustomException;
-import com.yizhaoqi.intellidoc.model.FileProcessingTask;
 import com.yizhaoqi.intellidoc.model.FileUpload;
 import com.yizhaoqi.intellidoc.model.OrganizationTag;
 import com.yizhaoqi.intellidoc.repository.FileUploadRepository;
 import com.yizhaoqi.intellidoc.service.FileTypeValidationService;
+import com.yizhaoqi.intellidoc.service.FileProcessingOutboxService;
 import com.yizhaoqi.intellidoc.service.ParseService;
 import com.yizhaoqi.intellidoc.service.UploadService;
 import com.yizhaoqi.intellidoc.service.UserService;
@@ -14,7 +13,6 @@ import com.yizhaoqi.intellidoc.utils.LogUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,10 +33,7 @@ public class UploadController {
     private UploadService uploadService;
 
     @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
-
-    @Autowired
-    private KafkaConfig kafkaConfig;
+    private FileProcessingOutboxService processingOutbox;
 
     @Autowired
     private UserService userService;
@@ -52,9 +47,9 @@ public class UploadController {
     @Autowired
     private ParseService parseService;
 
-    public UploadController(UploadService uploadService, KafkaTemplate<String, Object> kafkaTemplate) {
+    public UploadController(UploadService uploadService, FileProcessingOutboxService processingOutbox) {
         this.uploadService = uploadService;
-        this.kafkaTemplate = kafkaTemplate;
+        this.processingOutbox = processingOutbox;
     }
 
     /**
@@ -291,6 +286,7 @@ public class UploadController {
             }
 
             if (fileUpload.getStatus() == FileUpload.STATUS_COMPLETED) {
+                processingOutbox.ensureUploadTask(request.fileMd5(), userId);
                 LogUtils.logBusiness("MERGE_FILE", userId, "文件已完成合并，按幂等成功返回: fileMd5=%s, fileName=%s", request.fileMd5(), request.fileName());
                 monitor.end("文件已完成合并");
                 return buildAlreadyMergedResponse(request.fileMd5());
@@ -326,6 +322,7 @@ public class UploadController {
                 FileUpload latestFileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(request.fileMd5(), userId)
                         .orElseThrow(() -> new RuntimeException("文件记录不存在"));
                 if (latestFileUpload.getStatus() == FileUpload.STATUS_COMPLETED) {
+                    processingOutbox.ensureUploadTask(request.fileMd5(), userId);
                     LogUtils.logBusiness("MERGE_FILE", userId, "文件已被其他请求合并完成，按幂等成功返回: fileMd5=%s, fileName=%s", request.fileMd5(), request.fileName());
                     monitor.end("文件已完成合并");
                     return buildAlreadyMergedResponse(request.fileMd5());
@@ -356,9 +353,8 @@ public class UploadController {
             ParseService.EmbeddingEstimate embeddingEstimate = null;
             try (io.minio.GetObjectResponse mergedFileStream = uploadService.getMergedFileStream(request.fileMd5())) {
                 embeddingEstimate = parseService.estimateEmbeddingUsage(mergedFileStream);
-                fileUpload.setEstimatedEmbeddingTokens(embeddingEstimate.estimatedTokens());
-                fileUpload.setEstimatedChunkCount(embeddingEstimate.estimatedChunkCount());
-                fileUploadRepository.save(fileUpload);
+                processingOutbox.saveEstimate(request.fileMd5(), userId,
+                        embeddingEstimate.estimatedTokens(), embeddingEstimate.estimatedChunkCount());
                 LogUtils.logBusiness(
                         "MERGE_FILE",
                         userId,
@@ -378,34 +374,8 @@ public class UploadController {
                 );
             }
 
-            // 发送任务到 Kafka，包含完整的权限信息
-            LogUtils.logBusiness("MERGE_FILE", userId, "创建文件处理任务: fileMd5=%s, fileName=%s, fileType=%s, orgTag=%s, isPublic=%s", 
-                    request.fileMd5(), request.fileName(), fileType, fileUpload.getOrgTag(), fileUpload.isPublic());
-            
-            FileProcessingTask task = new FileProcessingTask(
-                    request.fileMd5(),
-                    objectUrl,
-                    request.fileName(),
-                    fileUpload.getUserId(),
-                    fileUpload.getOrgTag(),
-                    fileUpload.isPublic(),
-                    FileProcessingTask.TASK_TYPE_UPLOAD_PROCESS,
-                    userId
-            );
-
-            fileUpload.setVectorizationStatus(FileUpload.VECTORIZATION_STATUS_PROCESSING);
-            fileUpload.setVectorizationErrorMessage(null);
-            fileUpload.setActualEmbeddingTokens(null);
-            fileUpload.setActualChunkCount(null);
-            fileUploadRepository.save(fileUpload);
-            
-            LogUtils.logBusiness("MERGE_FILE", userId, "发送文件处理任务到Kafka(事务): topic=%s, fileMd5=%s, fileName=%s", 
-                    kafkaConfig.getFileProcessingTopic(), request.fileMd5(), request.fileName());
-            kafkaTemplate.executeInTransaction(kt -> {
-                kt.send(kafkaConfig.getFileProcessingTopic(), task);
-                return true;
-            });
-            LogUtils.logBusiness("MERGE_FILE", userId, "文件处理任务已发送: fileMd5=%s, fileName=%s, fileType=%s", request.fileMd5(), request.fileName(), fileType);
+            // mergeChunks has already committed the outbox record. Kafka outages
+            // do not turn a successfully committed merge into an API failure.
 
             // 构建数据对象
             Map<String, Object> data = new HashMap<>();
@@ -418,7 +388,7 @@ public class UploadController {
             // 构建统一响应格式
             Map<String, Object> response = new HashMap<>();
             response.put("code", 200);
-            response.put("message", "文件合并成功，任务已发送到 Kafka");
+            response.put("message", "文件合并成功，处理任务已可靠入队");
             response.put("data", data);
             
             LogUtils.logUserOperation(userId, "MERGE_FILE", request.fileMd5(), "SUCCESS");

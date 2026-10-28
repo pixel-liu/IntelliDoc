@@ -91,6 +91,9 @@ public class FileUpload {
     @Column(name = "vectorization_status", length = 32)
     private String vectorizationStatus;
 
+    @Column(name = "processing_task_id", length = 36)
+    private String processingTaskId;
+
     @Column(name = "vectorization_error_message", length = 1000)
     private String vectorizationErrorMessage;
 

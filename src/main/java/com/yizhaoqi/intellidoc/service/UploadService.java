@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -58,6 +57,9 @@ public class UploadService {
 
     @Autowired
     private MinioConfig minioConfig;
+
+    @Autowired
+    private FileProcessingOutboxService processingOutbox;
 
     /**
      * 上传文件分片
@@ -595,6 +597,9 @@ public class UploadService {
                 );
                 logger.info("合并文件信息 => fileMd5: {}, fileName: {}, fileType: {}, path: {}, size: {}", fileMd5, fileName, fileType, mergedPath, stat.size());
 
+                // Commit completion and dispatch intent before removing source chunks.
+                processingOutbox.completeUpload(fileMd5, userId);
+
                 // 清理分片文件
                 logger.info("开始清理分片文件 => fileMd5: {}, fileName: {}, 分片数量: {}", fileMd5, fileName, partPaths.size());
                 for (String path : partPaths) {
@@ -612,25 +617,21 @@ public class UploadService {
                     }
                 }
                 logger.info("分片文件清理完成 => fileMd5: {}, fileName: {}, fileType: {}", fileMd5, fileName, fileType);
-                int deletedChunkRows = chunkInfoRepository.deleteByFileMd5(fileMd5);
-                logger.info("分片元数据已清理 => fileMd5: {}, fileName: {}, deletedRows: {}", fileMd5, fileName, deletedChunkRows);
+                try {
+                    int deletedChunkRows = chunkInfoRepository.deleteByFileMd5(fileMd5);
+                    logger.info("分片元数据已清理 => fileMd5: {}, fileName: {}, deletedRows: {}", fileMd5, fileName, deletedChunkRows);
+                } catch (Exception cleanupException) {
+                    logger.warn("合并已提交，分片元数据清理失败: {}", fileMd5, cleanupException);
+                }
 
                 // 删除 Redis 中的分片状态记录
                 logger.info("删除Redis中的分片状态记录 => fileMd5: {}, fileName: {}, userId: {}", fileMd5, fileName, userId);
-                deleteFileMark(fileMd5, userId);
+                try {
+                    deleteFileMark(fileMd5, userId);
+                } catch (Exception cleanupException) {
+                    logger.warn("合并已提交，Redis 分片状态清理失败: {}", fileMd5, cleanupException);
+                }
                 logger.info("分片状态记录已删除 => fileMd5: {}, fileName: {}, userId: {}", fileMd5, fileName, userId);
-
-                // 更新文件状态
-                logger.info("更新文件状态为已完成 => fileMd5: {}, fileName: {}, fileType: {}, userId: {}", fileMd5, fileName, fileType, userId);
-                FileUpload fileUpload = fileUploadRepository.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc(fileMd5, userId)
-                        .orElseThrow(() -> {
-                            logger.error("更新文件状态失败，文件记录不存在 => fileMd5: {}, fileName: {}", fileMd5, fileName);
-                            return new RuntimeException("文件记录不存在: " + fileMd5);
-                        });
-                fileUpload.setStatus(FileUpload.STATUS_COMPLETED);
-                fileUpload.setMergedAt(LocalDateTime.now());
-                fileUploadRepository.save(fileUpload);
-                logger.info("文件状态已更新为已完成 => fileMd5: {}, fileName: {}, fileType: {}", fileMd5, fileName, fileType);
 
                 // 生成预签名 URL（有效期为 1 小时）
                 logger.info("开始生成预签名URL => fileMd5: {}, fileName: {}, path: {}", fileMd5, fileName, mergedPath);

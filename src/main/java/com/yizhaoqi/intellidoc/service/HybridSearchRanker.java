@@ -18,8 +18,10 @@ public class HybridSearchRanker {
         Map<String, Double> scores = new HashMap<>();
         addChannel(knn, properties.getKnnWeight(), documents, scores);
         addChannel(bm25, properties.getBm25Weight(), documents, scores);
+        double minimumScore = properties.minimumScore();
         return scores.entrySet().stream()
                 .map(item -> new RankedDocument(item.getKey(), documents.get(item.getKey()), item.getValue()))
+                .filter(item -> item.score() >= minimumScore)
                 .sorted(Comparator.comparingDouble(RankedDocument::score).reversed().thenComparing(RankedDocument::key))
                 .limit(topK).toList();
     }

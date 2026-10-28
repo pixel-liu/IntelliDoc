@@ -296,6 +296,12 @@ public class ChatHandler {
             if (content == null || content.isBlank()) {
                 content = "工具 " + toolCall.name() + " 执行成功，但没有返回可展示内容。";
             }
+            if (AgentToolRegistry.NO_KNOWLEDGE_RESULT.equals(content)) {
+                // 空检索结果直接返回固定文案，不再把任何参考片段交给下一轮模型改写。
+                appendStreamChunk(userId, generationId, conversationId, content);
+                sendToolCallStatus(userId, generationId, conversationId, toolCall, "success");
+                return new ExecutedToolResult(content, true);
+            }
             sendToolCallStatus(userId, generationId, conversationId, toolCall, "success");
             return new ExecutedToolResult(content, toolResult.streamedToUser());
         } catch (Exception exception) {
@@ -323,7 +329,14 @@ public class ChatHandler {
             return;
         }
         Object resultsObj = toolResult.data().get("results");
-        if (!(resultsObj instanceof List<?> rawList) || rawList.isEmpty()) {
+        if (!(resultsObj instanceof List<?> rawList)) {
+            return;
+        }
+
+        if (rawList.isEmpty()) {
+            generationReferenceMappings.remove(generationId);
+            chatGenerationStateService.updateReferenceMappings(generationId, Map.of());
+            logger.info("ReAct search_knowledge 过滤后无结果，已清空引用映射: generationId={}", generationId);
             return;
         }
 

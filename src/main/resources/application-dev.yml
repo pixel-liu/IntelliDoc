@@ -38,7 +38,6 @@ spring:
       acks: all
       retries: 3
       enable-idempotence: true
-      transactional-id-prefix: file-upload-tx-
       properties:
         client.dns.lookup: use_all_dns_ips
     consumer:
@@ -56,6 +55,8 @@ spring:
       # 本地单机 Kafka 默认建议 1 分区、1 副本
       partitions: ${SPRING_KAFKA_TOPIC_PARTITIONS:1}
       replication-factor: ${SPRING_KAFKA_TOPIC_REPLICATION_FACTOR:1}
+      min-insync-replicas: ${SPRING_KAFKA_TOPIC_MIN_INSYNC_REPLICAS:1}
+
   webflux:
     client:
       max-in-memory-size: 16MB
@@ -111,6 +112,11 @@ rate-limit:
     day-window-seconds: ${RATE_LIMIT_EMBEDDING_DAY_WINDOW_SECONDS:86400}
 
 file:
+  processing:
+    # Local single-node Kafka can run without a transaction coordinator. The durable
+    # outbox and idempotent producer still provide at-least-once delivery.
+    kafka:
+      transactions-enabled: ${FILE_PROCESSING_KAFKA_TRANSACTIONS_ENABLED:false}
   parsing:
     chunk-size: 512
     overlap-size: 100

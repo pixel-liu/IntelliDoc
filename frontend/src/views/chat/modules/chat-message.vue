@@ -487,7 +487,7 @@ async function handleSourceFileClick(fileInfo: {
 }
 .chat-message {
   position: relative;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .chat-message__meta {
@@ -495,7 +495,7 @@ async function handleSourceFileClick(fileInfo: {
 }
 
 .chat-message__avatar {
-  border: 1px solid color-mix(in srgb, var(--id-primary) 28%, var(--id-line));
+  border: 1px solid var(--id-line);
   color: var(--id-primary) !important;
   background: var(--id-primary-quiet) !important;
 }
@@ -514,10 +514,10 @@ async function handleSourceFileClick(fileInfo: {
   display: block;
   width: fit-content;
   max-width: min(78%, 720px);
-  border: 1px solid var(--id-line);
-  border-radius: 3px 9px 9px 9px;
+  border: 0;
+  border-radius: 4px 8px 8px;
   color: var(--id-ink);
-  background: color-mix(in srgb, var(--id-canvas) 62%, var(--id-paper));
+  background: var(--id-primary-quiet);
   padding: 10px 14px;
   line-height: 1.7;
 }

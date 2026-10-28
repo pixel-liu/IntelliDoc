@@ -56,9 +56,9 @@ function formatDate(dateStr?: string) {
 <template>
   <div
     class="conversation-sidebar relative h-full shrink-0 flex flex-col overflow-hidden transition-[width] duration-200 ease-out"
-    :class="collapsed ? 'w-0 min-w-0 border-r-0' : 'w-[260px] min-w-[260px]'"
+    :class="collapsed ? 'w-0 min-w-0 border-r-0' : 'w-[236px] min-w-[236px]'"
   >
-    <div class="conversation-sidebar__inner flex w-[260px] flex-1 flex-col overflow-hidden" :class="{ 'pointer-events-none invisible': collapsed }">
+    <div class="conversation-sidebar__inner flex w-[236px] flex-1 flex-col overflow-hidden" :class="{ 'pointer-events-none invisible': collapsed }">
     <div class="conversation-sidebar__header flex items-center justify-between">
       <span class="text-15px font-600">对话列表</span>
       <div class="flex items-center gap-1">
@@ -84,19 +84,19 @@ function formatDate(dateStr?: string) {
     <!-- Tabs -->
     <div class="conversation-sidebar__tabs flex">
       <div
-        class="flex-1 cursor-pointer rounded-md px-3 py-1.5 text-center text-12px font-500 transition-all"
+        class="conversation-tab flex-1 cursor-pointer px-3 py-2 text-center text-12px font-500"
         :class="activeTab === 'active'
-          ? 'bg-white text-[rgb(var(--primary-color))] shadow-sm dark:bg-[#FFFFFF14] dark:text-(--primary-color)'
-          : 'text-#666 dark:text-#999'"
+          ? 'conversation-tab--active'
+          : ''"
         @click="setActiveTab('active')"
       >
         活跃
       </div>
       <div
-        class="flex-1 cursor-pointer rounded-md px-3 py-1.5 text-center text-12px font-500 transition-all"
+        class="conversation-tab flex-1 cursor-pointer px-3 py-2 text-center text-12px font-500"
         :class="activeTab === 'archived'
-          ? 'bg-white text-[rgb(var(--primary-color))] shadow-sm dark:bg-[#FFFFFF14] dark:text-(--primary-color)'
-          : 'text-#666 dark:text-#999'"
+          ? 'conversation-tab--active'
+          : ''"
         @click="setActiveTab('archived')"
       >
         已归档
@@ -120,14 +120,14 @@ function formatDate(dateStr?: string) {
             :key="session.conversationId"
             class="conversation-session group flex cursor-pointer items-center gap-2.5 px-3 py-2.5 transition-all"
             :class="session.conversationId === conversationId
-              ? 'conversation-session--active bg-[rgb(var(--primary-color)/0.08)]'
-              : 'hover:bg-[rgb(var(--border-color)/0.3)] dark:hover:bg-[#FFFFFF08]'"
+              ? 'conversation-session--active'
+              : ''"
             @click="handleSelect(session.conversationId)"
           >
-            <div class="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg text-15px"
+            <div class="conversation-session__icon shrink-0 flex h-6 w-6 items-center justify-center text-15px"
               :class="session.conversationId === conversationId
-                ? 'bg-[rgb(var(--primary-color)/0.12)] text-[rgb(var(--primary-color))]'
-                : 'bg-[rgb(var(--border-color)/0.2)] text-#999 dark:bg-[#FFFFFF0A]'"
+                ? 'conversation-session__icon--active'
+                : ''"
             >
               <icon-material-symbols:chat-outline-rounded />
             </div>
@@ -181,47 +181,79 @@ function formatDate(dateStr?: string) {
 <style scoped>
 .conversation-sidebar {
   border-right: 1px solid var(--id-line) !important;
-  background: color-mix(in srgb, var(--id-canvas) 62%, var(--id-paper)) !important;
+  background: color-mix(in srgb, var(--id-canvas) 56%, var(--id-paper)) !important;
 }
 
 .conversation-sidebar__header {
-  min-height: 66px;
+  min-height: 56px;
   border-bottom: 1px solid var(--id-line);
-  padding: 15px 14px 12px;
+  padding: 11px 12px;
 }
 
 .conversation-sidebar__tabs {
-  margin: 10px 12px 8px;
-  border: 1px solid var(--id-line);
-  border-radius: 7px;
-  background: var(--id-paper) !important;
-  padding: 3px;
+  margin: 7px 12px 6px;
+  border-bottom: 1px solid var(--id-line);
 }
 
-.conversation-sidebar__tabs > div {
-  border-radius: 5px;
-  box-shadow: none !important;
+.conversation-tab {
+  position: relative;
+  color: var(--id-ink-soft);
+  transition: color 140ms ease;
+}
+
+.conversation-tab:hover {
+  color: var(--id-ink);
+}
+
+.conversation-tab--active {
+  color: var(--id-primary);
+}
+
+.conversation-tab--active::after {
+  position: absolute;
+  right: 18px;
+  bottom: -1px;
+  left: 18px;
+  height: 2px;
+  background: var(--id-primary);
+  content: '';
 }
 
 .conversation-sidebar__list {
-  padding: 4px 8px 14px;
+  padding: 4px 8px 12px;
 }
 
 .conversation-session {
   position: relative;
   margin-bottom: 2px;
-  border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 5px;
 }
 
 .conversation-session:hover {
-  border-color: var(--id-line);
   background: var(--id-paper) !important;
 }
 
 .conversation-session--active {
-  border-color: color-mix(in srgb, var(--id-primary) 26%, var(--id-line));
   background: var(--id-primary-quiet) !important;
+}
+
+.conversation-session--active::before {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--id-primary);
+  content: '';
+}
+
+.conversation-session__icon {
+  color: var(--id-ink-soft);
+}
+
+.conversation-session__icon--active {
+  color: var(--id-primary);
 }
 
 .session-list-enter-active,

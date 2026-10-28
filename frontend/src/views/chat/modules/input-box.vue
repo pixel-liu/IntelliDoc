@@ -376,7 +376,6 @@ onUnmounted(() => {
 
 <template>
   <div class="input-dock">
-    <div class="input-dock__rule" />
     <div
       class="chat-input-shell mx-auto w-full flex items-end gap-2"
     >
@@ -429,25 +428,15 @@ onUnmounted(() => {
   flex-shrink: 0;
   border-top: 1px solid var(--id-line);
   background: var(--id-paper);
-  padding: 14px 28px 12px 44px;
-}
-
-.input-dock__rule {
-  position: absolute;
-  top: -1px;
-  left: 44px;
-  width: 88px;
-  height: 2px;
-  background: var(--id-primary);
+  padding: 12px 24px 10px;
 }
 
 .chat-input-shell {
-  max-width: 920px;
+  max-width: 820px;
   border: 1px solid var(--id-line-strong);
-  border-radius: 10px 10px 10px 3px;
+  border-radius: 8px;
   background: var(--id-paper);
   padding: 10px 11px 10px 14px;
-  box-shadow: 0 4px 18px rgba(20, 54, 54, 0.045);
   transition:
     border-color 0.16s ease,
     box-shadow 0.16s ease;
@@ -455,7 +444,7 @@ onUnmounted(() => {
 
 .chat-input-shell:focus-within {
   border-color: var(--id-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--id-primary) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--id-primary) 11%, transparent);
 }
 
 .chat-input {
@@ -471,7 +460,7 @@ onUnmounted(() => {
 }
 
 .input-dock__meta {
-  max-width: 920px;
+  max-width: 820px;
   color: var(--id-ink-soft);
 }
 
@@ -480,8 +469,5 @@ onUnmounted(() => {
     padding: 12px 14px 10px;
   }
 
-  .input-dock__rule {
-    left: 14px;
-  }
 }
 </style>

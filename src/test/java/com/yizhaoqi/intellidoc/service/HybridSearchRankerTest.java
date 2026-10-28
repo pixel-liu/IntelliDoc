@@ -36,11 +36,24 @@ class HybridSearchRankerTest {
     @Test
     void tiesAreStableAndDuplicateHitsDoNotInflateRrf() {
         var properties = new HybridSearchProperties(); properties.setFusion(HybridSearchProperties.Fusion.RRF);
+        properties.setRrfMinScore(0d);
         var ranked = new HybridSearchRanker(properties).rank(
                 List.of(hit("a", 1), hit("a", 1)), List.of(hit("b", 1)), 5);
         assertEquals(List.of("a", "b"), ranked.stream().map(HybridSearchRanker.RankedDocument::key).toList());
         assertEquals(ranked.get(0).score(), ranked.get(1).score());
         assertTrue(new HybridSearchRanker(properties).rank(List.of(), List.of(), 5).isEmpty());
+    }
+    @Test
+    void defaultRrfThresholdUsesTheReciprocalRankScoreScale() {
+        var properties = new HybridSearchProperties();
+        var ranker = new HybridSearchRanker(properties);
+
+        assertTrue(ranker.rank(List.of(hit("vector-only", .99)), List.of(), 5).isEmpty());
+        var consensus = ranker.rank(
+                List.of(hit("shared", .99)), List.of(hit("shared", 1000)), 5);
+
+        assertEquals(1, consensus.size());
+        assertEquals(2d / 61, consensus.get(0).score(), 1e-12);
     }
     @Test
     void invalidExperimentalConfigurationIsRejected() {

@@ -35,10 +35,9 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: all                 # 全部 ISR 落盘才确认
+      acks: all                 # 等待全部 ISR 确认，不代表每次强制刷盘
       retries: 3
       enable-idempotence: true  # 幂等生产者（防止重复消息
-      transactional-id-prefix: file-upload-tx-  # 事务ID前缀
       properties:
         client.dns.lookup: use_all_dns_ips
     consumer:
@@ -59,6 +58,7 @@ spring:
       # 启动时自动建 topic 的默认参数，本地单机通常保持 1/1
       partitions: ${SPRING_KAFKA_TOPIC_PARTITIONS:1}
       replication-factor: ${SPRING_KAFKA_TOPIC_REPLICATION_FACTOR:1}
+      min-insync-replicas: ${SPRING_KAFKA_TOPIC_MIN_INSYNC_REPLICAS:1}
   webflux:
     client:
       max-in-memory-size: 16MB
@@ -133,6 +133,14 @@ usage-quota:
     admin-init-tokens: ${USAGE_QUOTA_EMBEDDING_ADMIN_INIT_TOKENS:100000} # 管理员初始 Embedding Token
 
 file:
+  processing:
+    transaction-id-prefix: file-upload-${INSTANCE_ID:${random.uuid}}-
+    outbox:
+      enabled: ${FILE_PROCESSING_OUTBOX_ENABLED:true}
+      poll-interval-ms: ${FILE_PROCESSING_OUTBOX_POLL_INTERVAL_MS:3000}
+      # Re-publish an acknowledgement that has not produced a durable completion receipt.
+      # Consumers deduplicate by task id, so this recovers from lost offsets or broker logs.
+      sent-recovery-delay-ms: ${FILE_PROCESSING_OUTBOX_SENT_RECOVERY_DELAY_MS:60000}
   parsing:
     chunk-size: 512
     overlap-size: 100
@@ -268,3 +276,7 @@ search:
     bm25-weight: ${SEARCH_HYBRID_BM25_WEIGHT:0.7}
     recall-multiplier: ${SEARCH_HYBRID_RECALL_MULTIPLIER:30}
     rrf-rank-constant: ${SEARCH_HYBRID_RRF_RANK_CONSTANT:60}
+    # RRF 是倒数排名和（k=60 时双路最高约 0.0328），不是 0-1 相似度。
+    rrf-min-score: ${SEARCH_HYBRID_RRF_MIN_SCORE:0.02}
+    # WEIGHTED 在双路 Min-Max 归一化后按权重融合，分数范围为 0-1。
+    weighted-min-score: ${SEARCH_HYBRID_WEIGHTED_MIN_SCORE:0.3}

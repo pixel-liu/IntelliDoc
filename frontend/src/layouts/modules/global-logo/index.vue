@@ -31,20 +31,20 @@ withDefaults(defineProps<Props>(), {
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 13px;
+  gap: 9px;
+  padding: 0 12px;
   color: var(--id-ink);
 }
 
 .app-brand__mark {
   display: inline-flex;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--id-primary);
-  border-radius: 8px 8px 8px 2px;
+  border-radius: 6px 6px 6px 2px;
   color: var(--id-primary);
   background: var(--id-primary-quiet);
 }
@@ -57,15 +57,15 @@ withDefaults(defineProps<Props>(), {
 }
 
 .app-brand__text strong {
-  font-size: 16px;
-  font-weight: 720;
+  font-size: 15px;
+  font-weight: 680;
   letter-spacing: -0.02em;
 }
 
 .app-brand__text small {
-  margin-top: 5px;
+  margin-top: 3px;
   color: var(--id-ink-soft);
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
 }
 </style>

@@ -97,7 +97,7 @@ class DocumentIsolationTest {
     @Test
     void reindexOnlyClearsSelectedUploadersData() throws Exception {
         FileUpload selected = file("1");
-        when(files.findFirstByFileMd5AndUserIdOrderByCreatedAtDesc("abc", "1")).thenReturn(Optional.of(selected));
+        when(files.findForProcessing("abc", "1")).thenReturn(Optional.of(selected));
         when(upload.getMergedFileStream("abc")).thenReturn(mock(io.minio.GetObjectResponse.class));
         var result = new VectorizationService.VectorizationUsageResult(12, 2, "model");
         when(embedding.vectorizeWithUsage("abc", "1", "TEAM_1", false, "admin")).thenReturn(result);

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Component } from 'vue';
-import { mixColor } from '@sa/color';
 import { loginModuleRecord } from '@/constants/app';
 import { useAppStore } from '@/store/modules/app';
 import { useThemeStore } from '@/store/modules/theme';
@@ -38,15 +37,10 @@ const moduleMap: Record<UnionKey.LoginModule, LoginModule> = {
 const activeModule = computed(() => moduleMap[props.module || 'pwd-login']);
 const isRegisterModule = computed(() => (props.module || 'pwd-login') === 'register');
 
-const bgColor = computed(() => {
-  const ratio = themeStore.darkMode ? 0.9 : 0;
-
-  return mixColor('#fff', '#000', ratio);
-});
 </script>
 
 <template>
-  <div class="login-page" :style="{ backgroundColor: bgColor }">
+  <div class="login-page">
     <section class="login-story" aria-label="IntelliDoc 产品介绍">
       <div class="login-story__brand">
         <span class="login-story__mark"><SystemLogo /></span>
@@ -106,50 +100,23 @@ const bgColor = computed(() => {
 .login-page {
   display: grid;
   min-height: 100%;
-  grid-template-columns: minmax(320px, 0.92fr) minmax(520px, 1.08fr);
+  grid-template-columns: minmax(340px, 0.82fr) minmax(520px, 1.18fr);
   color: var(--id-ink);
   overflow-x: hidden;
   background: var(--id-canvas) !important;
 }
 
 .login-story {
-  position: relative;
   display: flex;
-  overflow: hidden;
   min-height: 100vh;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1px solid rgba(255, 255, 255, 0.09);
-  color: #eaf2ef;
-  background: #152b33;
-  padding: clamp(30px, 5vw, 72px);
-}
-
-.login-story::before,
-.login-story::after {
-  position: absolute;
-  right: 12%;
-  border: 1px solid rgba(119, 205, 193, 0.17);
-  content: '';
-}
-
-.login-story::before {
-  top: 17%;
-  width: 42%;
-  height: 31%;
-  border-radius: 3px 26px 3px 3px;
-}
-
-.login-story::after {
-  top: 54%;
-  width: 28%;
-  height: 18%;
-  border-color: rgba(196, 119, 50, 0.24);
-  border-radius: 3px;
+  color: var(--id-ink);
+  background: transparent;
+  padding: clamp(30px, 4.5vw, 64px);
 }
 
 .login-story__brand {
-  z-index: 1;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -164,47 +131,50 @@ const bgColor = computed(() => {
   height: 40px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #58b8ae;
-  border-radius: 9px 9px 9px 2px;
-  color: #79c9c0;
+  border: 1px solid color-mix(in srgb, var(--id-primary) 42%, var(--id-line));
+  border-radius: 8px 8px 8px 2px;
+  color: var(--id-primary);
+  background: var(--id-primary-quiet);
   font-size: 24px;
 }
 
 .login-story__content {
-  z-index: 1;
-  max-width: 520px;
+  max-width: 470px;
+  border-left: 2px solid var(--id-primary-soft);
+  padding-left: clamp(20px, 2.5vw, 36px);
 }
 
 .login-story__kicker {
-  margin: 0 0 18px;
-  color: #79c9c0;
-  font-size: 13px;
+  margin: 0 0 14px;
+  color: var(--id-primary);
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.12em;
 }
 
 .login-story h1 {
   margin: 0;
-  font-size: clamp(38px, 4.3vw, 66px);
-  font-weight: 620;
-  letter-spacing: -0.055em;
-  line-height: 1.12;
+  font-size: clamp(34px, 3.6vw, 52px);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.16;
 }
 
 .login-story__lead {
   max-width: 34em;
-  margin: 28px 0 0;
-  color: rgba(234, 242, 239, 0.7);
-  font-size: 16px;
-  line-height: 1.8;
+  margin: 22px 0 0;
+  color: var(--id-ink-soft);
+  font-size: 14px;
+  line-height: 1.75;
 }
 
 .login-story__features {
   display: grid;
-  margin: 34px 0 0;
-  gap: 13px;
+  margin: 28px 0 0;
+  gap: 11px;
   padding: 0;
-  color: rgba(234, 242, 239, 0.84);
+  color: var(--id-ink-soft);
+  font-size: 13px;
   list-style: none;
 }
 
@@ -215,16 +185,15 @@ const bgColor = computed(() => {
 }
 
 .login-story__features span {
-  width: 18px;
+  width: 14px;
   height: 1px;
-  flex: 0 0 18px;
-  background: #58b8ae;
+  flex: 0 0 14px;
+  background: var(--id-primary);
 }
 
 .login-story__footer {
-  z-index: 1;
   margin: 0;
-  color: rgba(234, 242, 239, 0.42);
+  color: var(--id-ink-soft);
   font-size: 12px;
 }
 
@@ -237,7 +206,7 @@ const bgColor = computed(() => {
   box-sizing: border-box;
   width: 100%;
   max-width: 100vw;
-  padding: 72px clamp(28px, 6vw, 96px);
+  padding: 64px clamp(28px, 6vw, 88px);
 }
 
 .login-workspace--wide {
@@ -253,11 +222,12 @@ const bgColor = computed(() => {
 }
 
 .login-card {
-  width: min(100%, 440px);
+  width: min(100%, 470px);
   min-width: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+  border: 1px solid var(--id-line);
+  border-radius: 10px;
+  background: var(--id-paper);
+  box-shadow: 0 14px 38px rgba(23, 33, 43, 0.06);
 }
 
 .login-workspace--wide .login-card {
@@ -265,7 +235,7 @@ const bgColor = computed(() => {
 }
 
 .login-card :deep(.n-card__content) {
-  padding: 0;
+  padding: 34px 36px 36px;
 }
 
 .login-panel {
@@ -273,7 +243,7 @@ const bgColor = computed(() => {
 }
 
 .login-panel__header {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .login-panel__index {
@@ -288,7 +258,7 @@ const bgColor = computed(() => {
 .login-panel__header h2 {
   margin: 0;
   color: var(--id-ink);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 680;
   letter-spacing: -0.04em;
 }
@@ -301,7 +271,7 @@ const bgColor = computed(() => {
 
 .login-panel__body {
   border-top: 1px solid var(--id-line);
-  padding-top: 28px;
+  padding-top: 24px;
 }
 
 @media (max-width: 900px) {
@@ -311,7 +281,8 @@ const bgColor = computed(() => {
 
   .login-story {
     min-height: auto;
-    padding: 26px 28px;
+    border-bottom: 1px solid var(--id-line);
+    padding: 20px 24px;
   }
 
   .login-story__content,
@@ -321,7 +292,7 @@ const bgColor = computed(() => {
 
   .login-workspace {
     min-height: calc(100vh - 93px);
-    padding: 64px 24px 36px;
+    padding: 56px 24px 32px;
   }
 }
 
@@ -340,6 +311,10 @@ const bgColor = computed(() => {
     width: calc(100vw - 56px);
     max-width: calc(100vw - 56px);
     flex: 0 0 calc(100vw - 56px);
+  }
+
+  .login-card :deep(.n-card__content) {
+    padding: 28px 24px 30px;
   }
 
   .login-panel,

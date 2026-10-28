@@ -4,19 +4,19 @@ export const themeSettings: App.Theme.ThemeSetting = {
   grayscale: false,
   colourWeakness: false,
   recommendColor: true,
-  themeColor: '#0B7A75',
-  otherColor: { info: '#287C96', success: '#3E8065', warning: '#C47732', error: '#C65353' },
+  themeColor: '#315F78',
+  otherColor: { info: '#3E7088', success: '#42765C', warning: '#9A6A39', error: '#BD4D57' },
   isInfoFollowPrimary: true,
   resetCacheStrategy: 'close',
   layout: { mode: 'vertical', scrollMode: 'content', reverseHorizontalMix: false },
   page: { animate: false, animateMode: 'fade' },
-  header: { height: 64, breadcrumb: { visible: false, showIcon: true }, multilingual: { visible: false } },
+  header: { height: 56, breadcrumb: { visible: false, showIcon: true }, multilingual: { visible: false } },
   tab: { visible: false, cache: true, height: 44, mode: 'chrome' },
   fixedHeaderAndTab: true,
   sider: {
     inverted: false,
-    width: 216,
-    collapsedWidth: 68,
+    width: 208,
+    collapsedWidth: 60,
     mixWidth: 90,
     mixCollapsedWidth: 64,
     mixChildMenuWidth: 200
@@ -26,23 +26,23 @@ export const themeSettings: App.Theme.ThemeSetting = {
   tokens: {
     light: {
       colors: {
-        container: 'rgb(252, 253, 251)',
-        layout: 'rgb(240, 244, 241)',
-        inverted: 'rgb(20, 43, 51)',
-        'base-text': 'rgb(28, 45, 50)'
+        container: 'rgb(255, 255, 255)',
+        layout: 'rgb(245, 246, 248)',
+        inverted: 'rgb(24, 37, 48)',
+        'base-text': 'rgb(23, 33, 43)'
       },
       boxShadow: {
-        header: '0 1px 0 rgb(25, 62, 61, 0.08)',
-        sider: '1px 0 0 rgb(25, 62, 61, 0.10)',
-        tab: '0 1px 0 rgb(25, 62, 61, 0.08)'
+        header: '0 1px 0 rgb(23, 33, 43, 0.08)',
+        sider: '1px 0 0 rgb(23, 33, 43, 0.08)',
+        tab: '0 1px 0 rgb(23, 33, 43, 0.08)'
       }
     },
     dark: {
       colors: {
-        container: 'rgb(19, 30, 34)',
-        layout: 'rgb(13, 23, 27)',
-        inverted: 'rgb(10, 20, 24)',
-        'base-text': 'rgb(224, 233, 230)'
+        container: 'rgb(21, 26, 31)',
+        layout: 'rgb(16, 20, 24)',
+        inverted: 'rgb(12, 16, 20)',
+        'base-text': 'rgb(231, 235, 239)'
       },
       boxShadow: {
         header: '0 1px 0 rgb(255, 255, 255, 0.06)',

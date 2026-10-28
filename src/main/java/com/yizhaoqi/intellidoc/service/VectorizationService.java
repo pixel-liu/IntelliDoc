@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.IntStream;
 
 // 向量化服务类
@@ -72,7 +73,8 @@ public class VectorizationService {
             // 构建 Elasticsearch 文档并存储
             List<EsDocument> esDocuments = IntStream.range(0, chunks.size())
                     .mapToObj(i -> new EsDocument(
-                            UUID.randomUUID().toString(),
+                            UUID.nameUUIDFromBytes((userId + ":" + fileMd5 + ":" + chunks.get(i).getChunkId())
+                                    .getBytes(StandardCharsets.UTF_8)).toString(),
                             fileMd5,
                             chunks.get(i).getChunkId(),
                             chunks.get(i).getContent(),
